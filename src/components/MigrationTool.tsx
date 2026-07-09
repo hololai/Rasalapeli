@@ -65,10 +65,12 @@ export const MigrationTool = () => {
 
       try {
         // 1. Fetch image from local dist
+        setLogs(prev => [...prev, `[${i+1}] Ladataan lokaalisti: ${filename}`]);
         const response = await fetch(url);
         const blob = await response.blob();
 
         // 2. Upload to Firebase Storage
+        setLogs(prev => [...prev, `[${i+1}] Tallennetaan pilveen: ${filename}`]);
         const storagePath = `images/${decade}/${filename}`;
         const storageRef = ref(storage, storagePath);
         
@@ -76,6 +78,7 @@ export const MigrationTool = () => {
         const downloadURL = await getDownloadURL(storageRef);
 
         // 3. Save to Firestore
+        setLogs(prev => [...prev, `[${i+1}] Tallennetaan tietokantaan: ${filename}`]);
         const docId = filename.replace(/\.[^/.]+$/, "");
         await setDoc(doc(db, "images", docId), {
           url: downloadURL,
