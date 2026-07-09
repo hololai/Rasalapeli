@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Yleinen sääntö: Pääsy evätty kaikkeen ellei toisin mainita
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Käyttäjäkokoelman säännöt
+    match /users/{userId} {
+      // 1. Kuka tahansa voi luoda oman käyttäjäprofiilinsa kirjautumisen yhteydessä
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // 2. Kirjautunut käyttäjä saa lukea ainoastaan oman profiilinsa tiedot (jotta rooli saadaan selville)
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // 3. SUPERADMIN SÄÄNTÖ: 
+      // Jos pyytäjän rooli on "superadmin" hänen omassa profiilissaan, 
+      // tai hän on kovakoodattu superadmin-sähköpostilla (heikki.laivamaa@gmail.com), 
+      // hän saa täyden luku- ja kirjoitusoikeuden KAIKKIIN käyttäjiin.
+      allow read, update, delete: if request.auth != null && (
+        request.auth.token.email == 'heikki.laivamaa@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+      );
+    }
+    
+    // (Myöhemmin lisätään säännöt kuville, joita "adminit" saavat päivittää)
+  }
+}

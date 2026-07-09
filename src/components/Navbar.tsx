@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Clock, Map, HelpCircle, LogOut, LogIn, User } from 'lucide-react';
+import { Home, Clock, Map, HelpCircle, LogOut, LogIn, User, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const navItems = [
+const defaultNavItems = [
   { path: '/',          label: 'Koti',      icon: Home },
   { path: '/timeline',  label: 'Aikamatka', icon: Clock },
   { path: '/map',       label: 'Kartta',    icon: Map },
@@ -19,6 +19,10 @@ const navItems = [
 export const Navbar = () => {
   const location = useLocation();
   const { user, profile, signInWithGoogle, logout } = useAuth();
+
+  const navItems = profile?.role === 'superadmin' 
+    ? [...defaultNavItems, { path: '/admin', label: 'Admin', icon: ShieldAlert }] 
+    : defaultNavItems;
 
   return (
     <>

@@ -50,13 +50,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(userSnap.data() as UserProfile);
           } else {
             // Uusi käyttäjä, tallennetaan tietokantaan
-            const isSuperAdmin = currentUser.email === 'heikki.laivamaa@gmail.com';
+            const PREDEFINED_ADMINS = [
+              'hannulaivamaa@gmail.com',
+              'helenalaivalahti@gmail.com',
+              'juhaville.laivamaa@gmail.com',
+              'markkulaivamaa7@gmail.com',
+              'outi.myllarinen@gmail.com',
+              'perttu.laivamaa@gmail.com',
+              'tiina.ilmanen@gmail.com',
+              'katariina.laivamaa@gmail.com'
+            ];
+            
+            let assignedRole: UserRole = 'user';
+            const userEmail = currentUser.email?.toLowerCase() || '';
+            
+            if (userEmail === 'heikki.laivamaa@gmail.com') {
+              assignedRole = 'superadmin';
+            } else if (PREDEFINED_ADMINS.includes(userEmail)) {
+              assignedRole = 'admin';
+            }
+            
             const newProfile: UserProfile = {
               uid: currentUser.uid,
               email: currentUser.email || '',
               displayName: currentUser.displayName || 'Tuntematon',
               photoURL: currentUser.photoURL || '',
-              role: isSuperAdmin ? 'superadmin' : 'user', // Uudet käyttäjät ovat oletuksena 'user'
+              role: assignedRole,
               createdAt: serverTimestamp(),
             };
             await setDoc(userRef, newProfile);
@@ -65,13 +84,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           console.error("Firestore virhe (Tarkista tietokannan säännöt!):", error);
           // Hätävara-fallback, jotta UI toimii vaikka Firestore estäisi lukemisen
-          const isSuperAdmin = currentUser.email === 'heikki.laivamaa@gmail.com';
+          const PREDEFINED_ADMINS = [
+            'hannulaivamaa@gmail.com',
+            'helenalaivalahti@gmail.com',
+            'juhaville.laivamaa@gmail.com',
+            'markkulaivamaa7@gmail.com',
+            'outi.myllarinen@gmail.com',
+            'perttu.laivamaa@gmail.com',
+            'tiina.ilmanen@gmail.com',
+            'katariina.laivamaa@gmail.com'
+          ];
+          
+          let fallbackRole: UserRole = 'user';
+          const userEmail = currentUser.email?.toLowerCase() || '';
+          
+          if (userEmail === 'heikki.laivamaa@gmail.com') {
+            fallbackRole = 'superadmin';
+          } else if (PREDEFINED_ADMINS.includes(userEmail)) {
+            fallbackRole = 'admin';
+          }
+          
           setProfile({
             uid: currentUser.uid,
             email: currentUser.email || '',
             displayName: currentUser.displayName || 'Tuntematon',
             photoURL: currentUser.photoURL || '',
-            role: isSuperAdmin ? 'superadmin' : 'user',
+            role: fallbackRole,
           });
         }
       } else {

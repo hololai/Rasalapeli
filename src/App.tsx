@@ -6,6 +6,7 @@ import { Home } from './pages/Home';
 import { Timeline } from './pages/Timeline';
 import { MapView } from './pages/MapView';
 import { Quiz } from './pages/Quiz';
+import { AdminPanel } from './pages/AdminPanel';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/map" element={<MapView />} />
             <Route path="/quiz" element={<Quiz />} />
+            <Route path="/admin" element={<AdminPanel />} />
           </Routes>
           <Navbar />
         </div>
