@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let assignedRole: UserRole = 'pending';
             const userEmail = currentUser.email?.toLowerCase() || '';
             
-            if (userEmail === 'heikki.laivamaa@gmail.com') {
+            if (userEmail === 'heikki.laivamaa@gmail.com' || userEmail === 'heikki.laivamaa@famula.fi') {
               assignedRole = 'superadmin';
             } else if (PREDEFINED_ADMINS.includes(userEmail)) {
               assignedRole = 'admin';
@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let fallbackRole: UserRole = 'pending';
           const userEmail = currentUser.email?.toLowerCase() || '';
           
-          if (userEmail === 'heikki.laivamaa@gmail.com') {
+          if (userEmail === 'heikki.laivamaa@gmail.com' || userEmail === 'heikki.laivamaa@famula.fi') {
             fallbackRole = 'superadmin';
           } else if (PREDEFINED_ADMINS.includes(userEmail)) {
             fallbackRole = 'admin';
