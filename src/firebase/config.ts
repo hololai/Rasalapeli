@@ -14,9 +14,6 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-// Pakotetaan Long Polling kokeilumielessä, koska Safarin WebSocket-esto voi aiheuttaa 10s viiveen
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true
-});
+export const db = getFirestore(app, 'kuvaohjelma');
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
