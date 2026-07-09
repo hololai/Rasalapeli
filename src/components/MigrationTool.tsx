@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase/config';
+import { db, storage, auth } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { UploadCloud, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { mapLocationsCollection } from '../data/mockData';
