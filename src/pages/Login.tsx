@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { LogIn, ShieldCheck, Image as ImageIcon, Loader2 } from 'lucide-react';
 
 export function Login() {
   const { signInWithGoogle } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    await signInWithGoogle();
+    // Kirjautumisen jälkeen AuthContext hoitaa tilan päivittämisen.
+    // Jos popup suljetaan ilman kirjautumista, tila jää päälle, joten 
+    // voisimme periaatteessa resetoida sen, mutta yleensä sivu päivittyy.
+    setTimeout(() => setIsLoggingIn(false), 5000); // Resetoi nappi 5s päästä jos popup suljettiin
+  };
 
   return (
     <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -29,11 +39,21 @@ export function Login() {
         </p>
 
         <button
-          onClick={signInWithGoogle}
-          className="w-full flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 text-white font-medium py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-amber-500/25 active:scale-[0.98]"
+          onClick={handleLogin}
+          disabled={isLoggingIn}
+          className="w-full flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-800 disabled:cursor-not-allowed text-white font-medium py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-amber-500/25 active:scale-[0.98]"
         >
-          <LogIn className="w-5 h-5" />
-          <span>Kirjaudu sisään Googlella</span>
+          {isLoggingIn ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Yhdistetään Googleen...</span>
+            </>
+          ) : (
+            <>
+              <LogIn className="w-5 h-5" />
+              <span>Kirjaudu sisään Googlella</span>
+            </>
+          )}
         </button>
 
         <div className="mt-8 flex items-center justify-center gap-2 text-stone-500 text-sm">
