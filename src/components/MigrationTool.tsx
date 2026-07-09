@@ -41,22 +41,27 @@ export const MigrationTool = () => {
         continue;
       }
 
-      // Etsi vuosikymmen
+      // Etsi vuosikymmen tiedostonimestä tai kansiosta
       const parts = fullPath.split('/');
+      const filename = parts[parts.length - 1];
       let decade = 'Tuntematon';
+      
+      const fileMatch = filename.match(/^(\d{4})s?_/);
+      const dirMatch = fullPath.match(/\/(\d{4})s?\//);
+
       if (pathLower.includes('/kotitalo/')) {
         decade = 'Kotitalo';
+      } else if (fileMatch) {
+        const year = parseInt(fileMatch[1]);
+        decade = `${Math.floor(year / 10) * 10}`;
+      } else if (dirMatch) {
+        const year = parseInt(dirMatch[1]);
+        decade = `${Math.floor(year / 10) * 10}`;
       } else {
-        if (parts.length >= 5) decade = parts[3];
-        if (!/^\d{4}s?$/.test(decade)) {
-          setLogs(prev => [...prev, `Ohitetaan (ei vuosikymmentä): ${fullPath}`]);
-          setProgress(p => ({ ...p, current: i + 1 }));
-          continue;
-        }
-        decade = decade.replace('s', '');
+        setLogs(prev => [...prev, `Ohitetaan (ei vuosikymmentä): ${fullPath}`]);
+        setProgress(p => ({ ...p, current: i + 1 }));
+        continue;
       }
-
-      const filename = parts[parts.length - 1];
 
       try {
         // 1. Fetch image from local dist
