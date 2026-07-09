@@ -7,20 +7,23 @@ import { Timeline } from './pages/Timeline';
 import { MapView } from './pages/MapView';
 import { Quiz } from './pages/Quiz';
 import { AdminPanel } from './pages/AdminPanel';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <div className="relative min-h-screen bg-rasala-dark">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/quiz" element={<Quiz />} />
-            <Route path="/admin" element={<AdminPanel />} />
-          </Routes>
-          <Navbar />
+          <ProtectedRoute>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/timeline" element={<Timeline />} />
+              <Route path="/map" element={<MapView />} />
+              <Route path="/quiz" element={<Quiz />} />
+              <Route path="/admin" element={<AdminPanel />} />
+            </Routes>
+            <Navbar />
+          </ProtectedRoute>
         </div>
       </Router>
     </AuthProvider>
