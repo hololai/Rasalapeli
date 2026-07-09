@@ -70,7 +70,7 @@ export function AdminPanel() {
   };
 
   if (loading) return <div className="p-8 text-center">Ladataan...</div>;
-  if (profile?.role !== 'superadmin') return <Navigate to="/" />;
+  if (profile?.role !== 'superadmin' && profile?.role !== 'admin') return <Navigate to="/" />;
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
@@ -80,7 +80,7 @@ export function AdminPanel() {
       </div>
       
       <p className="text-stone-600 dark:text-stone-300 mb-8">
-        Tervetuloa Superadmin. Täällä voit hallita sovelluksen käyttäjiä ja heidän oikeuksiaan.
+        Tervetuloa {profile?.role === 'superadmin' ? 'Superadmin' : 'Ylläpitäjä'}. Täällä voit hallita sovelluksen käyttäjiä ja heidän oikeuksiaan.
       </p>
 
       {error && (
@@ -110,7 +110,12 @@ export function AdminPanel() {
                   <td colSpan={4} className="p-8 text-center text-stone-500">Ei käyttäjiä löytynyt.</td>
                 </tr>
               ) : (
-                users.map(u => (
+                users.map(u => {
+                  const isSuperAdmin = profile?.role === 'superadmin';
+                  const isAdmin = profile?.role === 'admin';
+                  const canEdit = isSuperAdmin ? (u.uid !== profile?.uid) : (isAdmin && (u.role === 'pending' || u.role === 'user'));
+                  
+                  return (
                   <tr key={u.uid} className="border-b border-stone-100 dark:border-stone-700/50 hover:bg-stone-50 dark:hover:bg-stone-700/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -131,24 +136,27 @@ export function AdminPanel() {
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                         u.role === 'superadmin' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                         u.role === 'admin' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                        u.role === 'pending' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                         'bg-stone-100 text-stone-800 dark:bg-stone-700 dark:text-stone-300'
                       }`}>
                         {u.role === 'superadmin' && <ShieldAlert className="w-3.5 h-3.5" />}
                         {u.role === 'admin' && <Shield className="w-3.5 h-3.5" />}
+                        {u.role === 'pending' && <span className="text-lg leading-none">⏳</span>}
                         {u.role.toUpperCase()}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {u.role !== 'superadmin' && (
+                        {canEdit && (
                           <>
                             <select
                               className="text-sm bg-stone-50 border border-stone-200 text-stone-800 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 dark:bg-stone-700 dark:border-stone-600 dark:placeholder-stone-400 dark:text-white"
                               value={u.role}
                               onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
                             >
+                              <option value="pending">PENDING</option>
                               <option value="user">USER</option>
-                              <option value="admin">ADMIN</option>
+                              {isSuperAdmin && <option value="admin">ADMIN</option>}
                             </select>
                             
                             <button
@@ -163,7 +171,7 @@ export function AdminPanel() {
                       </div>
                     </td>
                   </tr>
-                ))
+                )})
               )}
             </tbody>
           </table>

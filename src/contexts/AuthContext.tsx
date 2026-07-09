@@ -3,7 +3,7 @@ import { type User, signInWithPopup, signOut, onAuthStateChanged } from 'firebas
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
-export type UserRole = 'superadmin' | 'admin' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'user' | 'pending';
 
 export interface UserProfile {
   uid: string;
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               'katariina.laivamaa@gmail.com'
             ];
             
-            let assignedRole: UserRole = 'user';
+            let assignedRole: UserRole = 'pending';
             const userEmail = currentUser.email?.toLowerCase() || '';
             
             if (userEmail === 'heikki.laivamaa@gmail.com') {
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'katariina.laivamaa@gmail.com'
           ];
           
-          let fallbackRole: UserRole = 'user';
+          let fallbackRole: UserRole = 'pending';
           const userEmail = currentUser.email?.toLowerCase() || '';
           
           if (userEmail === 'heikki.laivamaa@gmail.com') {

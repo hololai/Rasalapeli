@@ -3,29 +3,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Yleinen sääntö: Pääsy evätty kaikkeen ellei toisin mainita
+    // Apufunktiot oikeuksien tarkistamiseen
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isSuperAdmin() {
+      return request.auth.token.email == 'heikki.laivamaa@gmail.com' || getRole() == 'superadmin';
+    }
+    function isAdmin() {
+      return getRole() == 'admin';
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Käyttäjäkokoelman säännöt
     match /users/{userId} {
-      // 1. Kuka tahansa voi luoda oman käyttäjäprofiilinsa kirjautumisen yhteydessä
       allow create: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin() || isAdmin());
       
-      // 2. Kirjautunut käyttäjä saa lukea ainoastaan oman profiilinsa tiedot (jotta rooli saadaan selville)
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // 3. SUPERADMIN SÄÄNTÖ: 
-      // Jos pyytäjän rooli on "superadmin" hänen omassa profiilissaan, 
-      // tai hän on kovakoodattu superadmin-sähköpostilla (heikki.laivamaa@gmail.com), 
-      // hän saa täyden luku- ja kirjoitusoikeuden KAIKKIIN käyttäjiin.
-      allow read, update, delete: if request.auth != null && (
-        request.auth.token.email == 'heikki.laivamaa@gmail.com' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
-      );
+      // SUPERADMIN SÄÄNTÖ: saa tehdä mitä vain muiden profiileille
+      allow update, delete: if request.auth != null && isSuperAdmin();
+
+      // ADMIN SÄÄNTÖ: saa päivittää tai poistaa profiileja, jos:
+      // 1. Kohdekäyttäjä on 'user' tai 'pending' (ei kosketa admineita/superadmineita)
+      // 2. Ei yritä asettaa rooliksi 'admin' tai 'superadmin' (estetään itsensä ylentäminen)
+      allow update: if request.auth != null && isAdmin() &&
+                    (resource.data.role == 'user' || resource.data.role == 'pending') &&
+                    (request.resource.data.role == 'user' || request.resource.data.role == 'pending');
+                    
+      allow delete: if request.auth != null && isAdmin() &&
+                    (resource.data.role == 'user' || resource.data.role == 'pending');
     }
-    
-    // (Myöhemmin lisätään säännöt kuville, joita "adminit" saavat päivittää)
   }
 }
