@@ -144,7 +144,7 @@ export const MapView = () => {
   // Nastojen muokkaus -state
   const [pinEditorOpen, setPinEditorOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
 
   useEffect(() => {
     fetchData();
@@ -190,7 +190,13 @@ export const MapView = () => {
   const handlePinClick = (loc: any) => {
     if (isAdminMode && mode === 'free') {
       setEditingPin({ ...loc, view: view });
-      setFormData({ title: loc.title, description: loc.description || '', era: loc.era || 'growth', imageId: loc.imageId || '' });
+      setFormData({ 
+        title: loc.title, 
+        description: loc.description || '', 
+        era: loc.era || 'growth', 
+        imageId: loc.imageId || '',
+        streetViewIframe: loc.streetViewIframe || ''
+      });
       setPinEditorOpen(true);
       return;
     }
@@ -210,7 +216,7 @@ export const MapView = () => {
     const percentY = Math.max(0, Math.min(100, Number(((relativeY / rect.height) * 100).toFixed(2))));
     
     setEditingPin({ id: `yard_custom_${Date.now()}`, x: percentX, y: percentY, isCustom: true, view: 'yard' });
-    setFormData({ title: '', description: '', era: 'growth', imageId: '' });
+    setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
     setPinEditorOpen(true);
   };
 
@@ -328,6 +334,12 @@ export const MapView = () => {
     const img = images.find(i => i.id === activeTarget.imageId);
     return img ? getEffectiveImage(img) : null;
   }, [activeTarget, images, pendingImageChanges]);
+
+  // Apufunktio iframen src:n kaivamiseen
+  const extractIframeSrc = (htmlString: string) => {
+    const match = htmlString.match(/src="([^"]+)"/);
+    return match ? match[1] : '';
+  };
 
   const lightboxImages = isKotitontti && kotitaloImages.length > 0
     ? kotitaloImages.map((img, idx) => ({
@@ -477,17 +489,34 @@ export const MapView = () => {
         <AnimatePresence mode="wait">
           {((mode === 'guided' && !mapFocus) || (mode === 'free' && selectedPin)) && activeTarget && (
             <motion.div key={activeTarget.id} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className={`cinema-card border ${eraBorder[era] || 'border-white/20'} overflow-hidden shadow-cinema backdrop-blur-xl bg-rasala-dark/80 pointer-events-auto`}>
-              <div className="relative group cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
-                <img
-                  src={isKotitontti && kotitaloImages.length > 0 ? kotitaloImages[0].url : (activeTargetImageObj?.url || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`)}
-                  alt={activeTarget.title}
-                  className={`w-full object-cover transition-all duration-700 era-${era}`}
-                  style={{ maxHeight: '40vh', width: '100%', objectFit: 'cover', transform: `rotate(${isKotitontti && kotitaloImages.length > 0 ? (kotitaloImages[0].rotation || 0) : (activeTargetImageObj?.rotation || 0)}deg)` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-rasala-dark/90 to-transparent opacity-80" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
-                  <ZoomIn size={40} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                </div>
+              
+              {/* Media Container (Kuva TAI Street View) */}
+              <div className="relative group cursor-zoom-in" onClick={() => !activeTarget.streetViewIframe && setLightboxOpen(true)}>
+                
+                {activeTarget.streetViewIframe ? (
+                  <iframe 
+                    src={extractIframeSrc(activeTarget.streetViewIframe)} 
+                    className="w-full h-[40vh] object-cover pointer-events-auto" 
+                    allowFullScreen 
+                    loading="lazy" 
+                    referrerPolicy="no-referrer-when-downgrade" 
+                  />
+                ) : (
+                  <img
+                    src={isKotitontti && kotitaloImages.length > 0 ? kotitaloImages[0].url : (activeTargetImageObj?.url || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`)}
+                    alt={activeTarget.title}
+                    className={`w-full object-cover transition-all duration-700 era-${era}`}
+                    style={{ maxHeight: '40vh', width: '100%', objectFit: 'cover', transform: `rotate(${isKotitontti && kotitaloImages.length > 0 ? (kotitaloImages[0].rotation || 0) : (activeTargetImageObj?.rotation || 0)}deg)` }}
+                  />
+                )}
+
+                <div className="absolute inset-0 bg-gradient-to-t from-rasala-dark/90 to-transparent opacity-80 pointer-events-none" />
+                
+                {!activeTarget.streetViewIframe && (
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center pointer-events-none">
+                    <ZoomIn size={40} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                  </div>
+                )}
                 <div className="absolute top-3 left-3 flex gap-2">
                   <span className={`text-xs font-bold px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm ${eraColor[era]}`}>{eraLabel[era] || 'Muisto'}</span>
                 </div>
@@ -566,6 +595,11 @@ export const MapView = () => {
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Kuvaus</label>
                   <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-32 bg-black/50 border border-white/20 rounded-lg p-4 text-white focus:border-rasala-gold outline-none resize-none" />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Google Street View -upotus (Iframe)</label>
+                  <input type="text" placeholder='<iframe src="https://www.google.com/maps/embed?...' value={formData.streetViewIframe} onChange={e => setFormData({ ...formData, streetViewIframe: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none" />
+                  <span className="text-[10px] text-white/40 mt-1 block">Korvaa valokuvan, jos asetettu. Jätä tyhjäksi näyttääksesi tavallisen kuvan.</span>
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Yhdistä Kuva (Firestore ID)</label>
