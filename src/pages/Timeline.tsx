@@ -30,13 +30,13 @@ export const Timeline = () => {
   // Lataa tallennetut asetukset kerran
   useEffect(() => {
     const savedC = localStorage.getItem('rasala_captions');
-    if (savedC) try { setCaptions(JSON.parse(savedC)); } catch(e){}
+    if (savedC) try { const p = JSON.parse(savedC); if (p) setCaptions(p); } catch(e){}
     
     const savedR = localStorage.getItem('rasala_rotations');
-    if (savedR) try { setRotations(JSON.parse(savedR)); } catch(e){}
+    if (savedR) try { const p = JSON.parse(savedR); if (p) setRotations(p); } catch(e){}
 
     const savedH = localStorage.getItem('rasala_hidden_images');
-    if (savedH) try { setHiddenImages(JSON.parse(savedH)); } catch(e){}
+    if (savedH) try { const p = JSON.parse(savedH); if (p) setHiddenImages(p); } catch(e){}
   }, []);
 
   // Tallenna kuvateksti

@@ -147,20 +147,20 @@ export const MapView = () => {
   const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', image: '' });
 
   useEffect(() => {
-    const savedR = localStorage.getItem('rasala_rotations');
-    if (savedR) try { setRotations(JSON.parse(savedR)); } catch(e){}
-
     const savedH = localStorage.getItem('rasala_hidden_images');
-    if (savedH) try { setHiddenImages(JSON.parse(savedH)); } catch(e){}
+    if (savedH) try { const p = JSON.parse(savedH); if (p) setHiddenImages(p); } catch(e){}
+
+    const savedR = localStorage.getItem('rasala_rotations');
+    if (savedR) try { const p = JSON.parse(savedR); if (p) setRotations(p); } catch(e){}
 
     const savedC = localStorage.getItem('rasala_captions');
-    if (savedC) try { setCaptions(JSON.parse(savedC)); } catch(e){}
+    if (savedC) try { const p = JSON.parse(savedC); if (p) setCaptions(p); } catch(e){}
 
     const savedV = localStorage.getItem('rasala_village_locations');
-    if (savedV) try { setVillageLocations(JSON.parse(savedV)); } catch(e){}
+    if (savedV) try { const p = JSON.parse(savedV); if (p) setVillageLocations(p); } catch(e){}
 
     const savedY = localStorage.getItem('rasala_yard_locations');
-    if (savedY) try { setYardLocations(JSON.parse(savedY)); } catch(e){}
+    if (savedY) try { const p = JSON.parse(savedY); if (p) setYardLocations(p); } catch(e){}
   }, []);
 
   const handleRotate = (path: string) => {
