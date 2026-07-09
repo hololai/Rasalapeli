@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import type { UserProfile, UserRole } from '../contexts/AuthContext';
 import { Shield, ShieldAlert, Trash2, User as UserIcon } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
-import { MigrationTool } from '../components/MigrationTool';
 
 export function AdminPanel() {
   const { profile, loading } = useAuth();
@@ -178,8 +177,6 @@ export function AdminPanel() {
           </table>
         </div>
       </div>
-      
-      <MigrationTool />
     </div>
   );
 }
