@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { mapLocationsCollection } from '../data/mockData';
-import { ArrowLeft, X, ZoomIn, ZoomOut, Unlock, Lock, Copy, Check, MousePointer2, PlayCircle, ChevronLeft, ChevronRight, MapPin, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, X, ZoomIn, ZoomOut, Unlock, Lock, Copy, Check, MousePointer2, PlayCircle, ChevronLeft, ChevronRight, MapPin, Trash2, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase/config';
+import { collection, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore';
 
-// Hae Kotitalon kuvat kansiosta dynaamisesti
-const kotitaloImagesRaw = import.meta.glob('/public/assets/KOTITALO/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
-const kotitaloImages = Array.from(new Set(Object.values(kotitaloImagesRaw).map(url => url as string)));
-
-// Hae KAIKKI kuvat pudotusvalikkoa varten (Nastan luonti)
-const allImagesRaw = import.meta.glob('/public/assets/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
-const allImages = Array.from(new Set(Object.values(allImagesRaw).map(url => url as string))).filter(url => !url.toLowerCase().includes('kääntöpuoli') && !url.toLowerCase().includes('kaantopuoli') && !url.toLowerCase().includes('back'));
+// Default mock data used ONLY if Firestore is totally empty
+import { mapLocationsCollection } from '../data/mockData';
 
 // Teräväkärkinen SVG-nasta Leafletille
 const createPushPinIcon = (color: string) => L.divIcon({
@@ -35,14 +32,12 @@ const eraLabel: Record<string, string> = {
   growth: 'Kasvukausi',
   modern: 'Nykypäivä',
 };
-
 const eraColor: Record<string, string> = {
   historical: 'text-amber-400',
   postwar:    'text-gray-400',
   growth:     'text-orange-400',
   modern:     'text-green-400',
 };
-
 const eraBorder: Record<string, string> = {
   historical: 'border-amber-500/30',
   postwar:    'border-gray-500/30',
@@ -108,9 +103,9 @@ const ImagePin = ({ loc, onClick, isAdmin, onLocationUpdate }: any) => {
         onClick={!isAdmin ? onClick : undefined}
         dangerouslySetInnerHTML={{ __html: createPushPinIcon('#d4af37').options.html || '' }}
       />
-      {!isAdmin && <span className="pin-label group-hover:opacity-100 absolute top-full mt-1 text-white bg-black/80 px-2 py-0.5 rounded">{loc.title}</span>}
+      {!isAdmin && <span className="pin-label group-hover:opacity-100 absolute top-full mt-1 text-white bg-black/80 px-2 py-0.5 rounded pointer-events-none">{loc.title}</span>}
       {isAdmin && (
-        <div className="absolute bottom-full mb-2 bg-black/80 backdrop-blur-md border border-rasala-gold/30 rounded-lg p-2 text-xs flex flex-col items-center shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+        <div className="absolute bottom-full mb-2 bg-black/80 backdrop-blur-md border border-rasala-gold/30 rounded-lg p-2 text-xs flex flex-col items-center shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none group-hover:pointer-events-auto">
           <span className="font-bold text-rasala-gold mb-1">{loc.title}</span>
           <div className="flex items-center gap-2">
             <span className="font-mono text-white/70 bg-black/50 px-1.5 py-0.5 rounded">x: {loc.x}, y: {loc.y}</span>
@@ -123,95 +118,79 @@ const ImagePin = ({ loc, onClick, isAdmin, onLocationUpdate }: any) => {
 };
 
 export const MapView = () => {
+  const { profile } = useAuth();
+  const isAdminUser = profile?.role === 'superadmin' || profile?.role === 'admin';
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
   const [view, setView] = useState<'village' | 'yard'>('village');
   const [mode, setMode] = useState<'free' | 'guided'>('free');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedPin, setSelectedPin] = useState<any | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [mapFocus, setMapFocus] = useState(true);
+  const [loading, setLoading] = useState(true);
   
-  // Data state
-  const initialVillageLocations = mapLocationsCollection.village as any[];
-  const initialYardLocations = mapLocationsCollection.yard as any[];
-  const [villageLocations, setVillageLocations] = useState(initialVillageLocations);
-  const [yardLocations, setYardLocations] = useState(initialYardLocations);
+  // Images from Firestore
+  const [images, setImages] = useState<any[]>([]);
+  // Locations from Firestore
+  const [villageLocations, setVillageLocations] = useState<any[]>([]);
+  const [yardLocations, setYardLocations] = useState<any[]>([]);
 
-  const [rotations, setRotations] = useState<Record<string, number>>({});
-  const [hiddenImages, setHiddenImages] = useState<string[]>([]);
-  const [captions, setCaptions] = useState<Record<string, string>>({});
+  // Pending changes for Bulk Save
+  const [pendingMapChanges, setPendingMapChanges] = useState<{ village?: any[], yard?: any[] }>({});
+  const [pendingImageChanges, setPendingImageChanges] = useState<Record<string, any>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Nastojen muokkaus -state
   const [pinEditorOpen, setPinEditorOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', image: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '' });
 
   useEffect(() => {
-    const savedH = localStorage.getItem('rasala_hidden_images');
-    if (savedH) try { const p = JSON.parse(savedH); if (p) setHiddenImages(p); } catch(e){}
-
-    const savedR = localStorage.getItem('rasala_rotations');
-    if (savedR) try { const p = JSON.parse(savedR); if (p) setRotations(p); } catch(e){}
-
-    const savedC = localStorage.getItem('rasala_captions');
-    if (savedC) try { const p = JSON.parse(savedC); if (p) setCaptions(p); } catch(e){}
-
-    const savedV = localStorage.getItem('rasala_village_locations');
-    if (savedV) try { const p = JSON.parse(savedV); if (p) setVillageLocations(p); } catch(e){}
-
-    const savedY = localStorage.getItem('rasala_yard_locations');
-    if (savedY) try { const p = JSON.parse(savedY); if (p) setYardLocations(p); } catch(e){}
+    fetchData();
   }, []);
 
-  const handleRotate = (path: string) => {
-    const newRotations = { ...rotations, [path]: ((rotations[path] || 0) + 90) % 360 };
-    setRotations(newRotations);
-    localStorage.setItem('rasala_rotations', JSON.stringify(newRotations));
-  };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch Images
+      const imgSnap = await getDocs(collection(db, 'images'));
+      const fetchedImages: any[] = [];
+      imgSnap.forEach(d => {
+        fetchedImages.push({ id: d.id, ...d.data() });
+      });
+      setImages(fetchedImages);
 
-  const handleHide = (path: string) => {
-    const newHidden = [...hiddenImages, path];
-    setHiddenImages(newHidden);
-    localStorage.setItem('rasala_hidden_images', JSON.stringify(newHidden));
-  };
-
-  const handleSaveCaption = (path: string, text: string) => {
-    const newCaptions = { ...captions, [path]: text };
-    setCaptions(newCaptions);
-    localStorage.setItem('rasala_captions', JSON.stringify(newCaptions));
-  };
-
-  const activeLocations = view === 'village' ? villageLocations : yardLocations;
-  const currentGuidedTarget = activeLocations[currentIndex];
-  const era = currentGuidedTarget?.era || 'growth';
-
-  // Tournee-animaation focus-logiikka
-  useEffect(() => {
-    if (mode === 'guided') {
-      setMapFocus(true);
-      const timer = setTimeout(() => {
-        setMapFocus(false);
-      }, 3000);
-      return () => clearTimeout(timer);
+      // Fetch Locations
+      const villDoc = await getDoc(doc(db, 'map_locations', 'village'));
+      const yardDoc = await getDoc(doc(db, 'map_locations', 'yard'));
+      
+      setVillageLocations(villDoc.exists() ? villDoc.data().locations : mapLocationsCollection.village);
+      setYardLocations(yardDoc.exists() ? yardDoc.data().locations : mapLocationsCollection.yard);
+    } catch (e) {
+      console.error("Virhe datan haussa:", e);
+    } finally {
+      setLoading(false);
     }
-  }, [currentIndex, mode]);
+  };
 
-  // Admin updates
+  // Get active locations (considering pending changes)
+  const effectiveVillageLocs = pendingMapChanges.village || villageLocations;
+  const effectiveYardLocs = pendingMapChanges.yard || yardLocations;
+
   const handleVillageUpdate = (id: string, lat: number, lng: number) => {
-    const newLocs = villageLocations.map(loc => loc.id === id ? { ...loc, lat, lng } : loc);
-    setVillageLocations(newLocs);
-    localStorage.setItem('rasala_village_locations', JSON.stringify(newLocs));
+    const newLocs = effectiveVillageLocs.map(loc => loc.id === id ? { ...loc, lat, lng } : loc);
+    setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
   };
   const handleYardUpdate = (id: string, x: number, y: number) => {
-    const newLocs = yardLocations.map(loc => loc.id === id ? { ...loc, x, y } : loc);
-    setYardLocations(newLocs);
-    localStorage.setItem('rasala_yard_locations', JSON.stringify(newLocs));
+    const newLocs = effectiveYardLocs.map(loc => loc.id === id ? { ...loc, x, y } : loc);
+    setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
   };
 
   const handlePinClick = (loc: any) => {
-    if (isAdmin && mode === 'free') {
+    if (isAdminMode && mode === 'free') {
       setEditingPin({ ...loc, view: view });
-      setFormData({ title: loc.title, description: loc.description || '', era: loc.era || 'growth', image: loc.image || '' });
+      setFormData({ title: loc.title, description: loc.description || '', era: loc.era || 'growth', imageId: loc.imageId || '' });
       setPinEditorOpen(true);
       return;
     }
@@ -221,7 +200,7 @@ export const MapView = () => {
   };
 
   const handleYardMapClick = (e: React.MouseEvent) => {
-    if (!isAdmin || mode !== 'free') return;
+    if (!isAdminMode || mode !== 'free') return;
     const container = document.getElementById('yard-map-container');
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -231,7 +210,7 @@ export const MapView = () => {
     const percentY = Math.max(0, Math.min(100, Number(((relativeY / rect.height) * 100).toFixed(2))));
     
     setEditingPin({ id: `yard_custom_${Date.now()}`, x: percentX, y: percentY, isCustom: true, view: 'yard' });
-    setFormData({ title: '', description: '', era: 'growth', image: '' });
+    setFormData({ title: '', description: '', era: 'growth', imageId: '' });
     setPinEditorOpen(true);
   };
 
@@ -239,19 +218,18 @@ export const MapView = () => {
     if (!editingPin) return;
     const isNew = editingPin.isCustom;
     const pinData = { ...editingPin, ...formData, isCustom: false };
+    delete pinData.view; // don't save view property to DB
 
     if (editingPin.view === 'village') {
-      let newLocs = [...villageLocations];
+      let newLocs = [...effectiveVillageLocs];
       if (isNew) newLocs.push(pinData);
       else newLocs = newLocs.map(loc => loc.id === pinData.id ? pinData : loc);
-      setVillageLocations(newLocs);
-      localStorage.setItem('rasala_village_locations', JSON.stringify(newLocs));
+      setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
     } else {
-      let newLocs = [...yardLocations];
+      let newLocs = [...effectiveYardLocs];
       if (isNew) newLocs.push(pinData);
       else newLocs = newLocs.map(loc => loc.id === pinData.id ? pinData : loc);
-      setYardLocations(newLocs);
-      localStorage.setItem('rasala_yard_locations', JSON.stringify(newLocs));
+      setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
     }
     setPinEditorOpen(false);
     setEditingPin(null);
@@ -264,43 +242,141 @@ export const MapView = () => {
     }
     if (window.confirm(`Haluatko varmasti poistaa nastan "${editingPin.title}"?`)) {
       if (editingPin.view === 'village') {
-        const newLocs = villageLocations.filter(loc => loc.id !== editingPin.id);
-        setVillageLocations(newLocs);
-        localStorage.setItem('rasala_village_locations', JSON.stringify(newLocs));
+        const newLocs = effectiveVillageLocs.filter(loc => loc.id !== editingPin.id);
+        setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
       } else {
-        const newLocs = yardLocations.filter(loc => loc.id !== editingPin.id);
-        setYardLocations(newLocs);
-        localStorage.setItem('rasala_yard_locations', JSON.stringify(newLocs));
+        const newLocs = effectiveYardLocs.filter(loc => loc.id !== editingPin.id);
+        setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
       }
       setPinEditorOpen(false);
       setEditingPin(null);
     }
   };
 
-  const activeTarget = mode === 'guided' ? currentGuidedTarget : selectedPin;
+  const handleImageUpdate = (id: string, updates: any) => {
+    setPendingImageChanges(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), ...updates }
+    }));
+  };
 
+  const saveAllChangesToDB = async () => {
+    try {
+      setIsSaving(true);
+      const batch = writeBatch(db);
+      
+      if (pendingMapChanges.village) {
+        batch.set(doc(db, 'map_locations', 'village'), { locations: pendingMapChanges.village });
+      }
+      if (pendingMapChanges.yard) {
+        batch.set(doc(db, 'map_locations', 'yard'), { locations: pendingMapChanges.yard });
+      }
+
+      Object.keys(pendingImageChanges).forEach(id => {
+        batch.update(doc(db, 'images', id), pendingImageChanges[id]);
+      });
+
+      await batch.commit();
+
+      if (pendingMapChanges.village) setVillageLocations(pendingMapChanges.village);
+      if (pendingMapChanges.yard) setYardLocations(pendingMapChanges.yard);
+      
+      setImages(prev => prev.map(img => {
+        if (pendingImageChanges[img.id]) return { ...img, ...pendingImageChanges[img.id] };
+        return img;
+      }));
+
+      setPendingMapChanges({});
+      setPendingImageChanges({});
+      alert("Muutokset tallennettu tietokantaan!");
+    } catch (e) {
+      console.error(e);
+      alert("Virhe tallennuksessa!");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const activeLocations = view === 'village' ? effectiveVillageLocs : effectiveYardLocs;
+  const currentGuidedTarget = activeLocations[currentIndex];
+  const activeTarget = mode === 'guided' ? currentGuidedTarget : selectedPin;
+  const era = activeTarget?.era || 'growth';
+
+  useEffect(() => {
+    if (mode === 'guided') {
+      setMapFocus(true);
+      const timer = setTimeout(() => {
+        setMapFocus(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, mode]);
+
+  // Yhdistetään kuva tiedot Firestoresta
+  const getEffectiveImage = (img: any) => ({ ...img, ...(pendingImageChanges[img.id] || {}) });
+  
   const isKotitontti = activeTarget?.id === 'kotitontti';
   
-  // Suodata pois piilotetut kuvat
-  const visibleKotitaloImages = kotitaloImages.filter(src => !hiddenImages.includes(src));
-  const hasKotitaloImages = visibleKotitaloImages.length > 0;
+  const kotitaloImages = useMemo(() => {
+    let list = images.map(getEffectiveImage).filter(i => i.decade === 'Kotitalo');
+    if (!isAdminMode) list = list.filter(i => !i.hidden);
+    return list;
+  }, [images, pendingImageChanges, isAdminMode]);
 
-  const lightboxImages = isKotitontti && hasKotitaloImages 
-    ? visibleKotitaloImages.map((src, idx) => ({
-        src,
-        title: `${activeTarget.title} (${idx + 1}/${visibleKotitaloImages.length})`,
-        description: captions[src] || activeTarget.description,
-        rotation: rotations[src] || 0,
+  const activeTargetImageObj = useMemo(() => {
+    if (!activeTarget || !activeTarget.imageId) return null;
+    const img = images.find(i => i.id === activeTarget.imageId);
+    return img ? getEffectiveImage(img) : null;
+  }, [activeTarget, images, pendingImageChanges]);
+
+  const lightboxImages = isKotitontti && kotitaloImages.length > 0
+    ? kotitaloImages.map((img, idx) => ({
+        id: img.id,
+        src: img.url,
+        title: `${activeTarget.title} (${idx + 1}/${kotitaloImages.length})`,
+        description: img.caption || activeTarget.description,
+        rotation: img.rotation || 0,
       }))
-    : activeTarget ? [{
-        src: activeTarget.image || `https://placehold.co/1200x800/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`,
+    : activeTargetImageObj ? [{
+        id: activeTargetImageObj.id,
+        src: activeTargetImageObj.url,
         title: activeTarget.title,
-        description: activeTarget.description,
-        rotation: activeTarget.image ? (rotations[activeTarget.image] || 0) : 0,
+        description: activeTargetImageObj.caption || activeTarget.description,
+        rotation: activeTargetImageObj.rotation || 0,
       }] : [];
+
+  const pendingCount = Object.keys(pendingMapChanges).length + Object.keys(pendingImageChanges).length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-rasala-dark flex items-center justify-center text-white/50">
+        <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-rasala-dark text-white pb-24 sm:pt-16 flex flex-col overflow-hidden">
+
+      {/* ── Kelluva Tallennuspainike ── */}
+      <AnimatePresence>
+        {pendingCount > 0 && (
+          <motion.div 
+            initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
+          >
+            <span className="font-bold whitespace-nowrap">
+              Kartassa muutoksia odottaa tallennusta!
+            </span>
+            <button 
+              onClick={saveAllChangesToDB} disabled={isSaving}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-5 py-2 rounded-xl font-bold transition-colors disabled:opacity-50"
+            >
+              {isSaving ? 'Tallennetaan...' : <><Save size={18} /> Tallenna tietokantaan</>}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Header ── */}
       <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-5 pb-4 max-w-5xl mx-auto w-full gap-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
@@ -312,12 +388,11 @@ export const MapView = () => {
           )}
           <h2 className="font-serif text-2xl sm:text-3xl font-bold flex items-center gap-3">
             {view === 'village' ? 'Rasala-Tournee' : 'Pihakartta'}
-            {isAdmin && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full uppercase">Admin</span>}
+            {isAdminMode && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full uppercase">Ylläpito</span>}
           </h2>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Tilanvaihdin */}
           <div className="flex bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 p-1 shadow-lg">
             <button
               onClick={() => { setMode('free'); setSelectedPin(null); }}
@@ -333,28 +408,23 @@ export const MapView = () => {
             </button>
           </div>
 
-          <button onClick={() => setIsAdmin(!isAdmin)} className={`p-2.5 rounded-xl border transition-all backdrop-blur-xl shadow-lg ${isAdmin ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-black/60 border-white/10 text-white/30 hover:text-white/80'}`}>
-            {isAdmin ? <Unlock size={18} /> : <Lock size={18} />}
-          </button>
+          {isAdminUser && (
+            <button onClick={() => setIsAdminMode(!isAdminMode)} className={`p-2.5 rounded-xl border transition-all backdrop-blur-xl shadow-lg ${isAdminMode ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-black/60 border-white/10 text-white/30 hover:text-white/80'}`}>
+              {isAdminMode ? <Unlock size={18} /> : <Lock size={18} />}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Taustakartta (Vain Tournee-tilassa tai Free-tilassa ilman korttia se on tausta) ── */}
+      {/* ── Taustakartta ── */}
       <div 
         className={`absolute inset-0 z-0 transition-all duration-1000 ${mode === 'guided' && mapFocus ? 'opacity-100' : 'opacity-50'} ${view === 'village' ? `era-${era}` : ''}`}
         style={{ pointerEvents: mode === 'free' && !selectedPin ? 'auto' : 'none' }}
       >
         <AnimatePresence mode="wait">
           
-          {/* VILLAGE (Leaflet) */}
           {view === 'village' && (
-            <motion.div
-              key="village"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={`relative w-full h-full ${isAdmin && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}
-            >
+            <motion.div key="village" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`relative w-full h-full ${isAdminMode && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}>
               <MapContainer 
                 center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} 
                 zoom={14} 
@@ -364,35 +434,21 @@ export const MapView = () => {
                 doubleClickZoom={mode === 'free'}
                 style={{ height: '100%', width: '100%', backgroundColor: '#0e1a10' }}
               >
-                <TileLayer
-                  attribution='&copy; OpenStreetMap'
-                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                />
-                <MapClickHandler isAdmin={isAdmin} onMapClick={(lat, lng) => {
+                <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                <MapClickHandler isAdmin={isAdminMode} onMapClick={(lat, lng) => {
                   if (mode !== 'free') return;
                   setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true, view: 'village' });
-                  setFormData({ title: '', description: '', era: 'growth', image: '' });
+                  setFormData({ title: '', description: '', era: 'growth', imageId: '' });
                   setPinEditorOpen(true);
                 }} />
-                <MapFlyTo 
-                  center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} 
-                  zoom={15} 
-                  isGuided={mode === 'guided'} 
-                />
+                <MapFlyTo center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} zoom={15} isGuided={mode === 'guided'} />
                 
-                {villageLocations.map(loc => (
+                {effectiveVillageLocs.map(loc => (
                   <Marker 
-                    key={loc.id} 
-                    position={[loc.lat, loc.lng]} 
-                    icon={loc.isHome ? homeIcon : defaultIcon}
-                    draggable={isAdmin && mode === 'free'}
+                    key={loc.id} position={[loc.lat, loc.lng]} icon={loc.isHome ? homeIcon : defaultIcon} draggable={isAdminMode && mode === 'free'}
                     eventHandlers={{
                       click: () => handlePinClick(loc),
-                      dragend: (e) => {
-                        const marker = e.target;
-                        const position = marker.getLatLng();
-                        handleVillageUpdate(loc.id, position.lat, position.lng);
-                      }
+                      dragend: (e) => handleVillageUpdate(loc.id, e.target.getLatLng().lat, e.target.getLatLng().lng)
                     }}
                   />
                 ))}
@@ -400,99 +456,49 @@ export const MapView = () => {
             </motion.div>
           )}
 
-          {/* YARD (Image Map) */}
           {view === 'yard' && (
-            <motion.div
-              key="yard"
-              id="yard-map-container"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={`relative w-full h-full flex items-center justify-center bg-rasala-dark ${isAdmin && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}
-            >
+            <motion.div key="yard" id="yard-map-container" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`relative w-full h-full flex items-center justify-center bg-rasala-dark ${isAdminMode && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}>
               <div id="yard-map-container" className="relative w-full max-w-6xl mx-auto" style={{ aspectRatio: '16/10' }} onClick={handleYardMapClick}>
-                <img src="/assets/pihakartta.png" alt="Pihakartta" className="w-full h-full object-cover pointer-events-none opacity-80" onError={(e) => { e.currentTarget.src = 'https://placehold.co/1200x800/1c2b1e/d4af37?text=Lataa+pihakartta.png+/assets/+kansioon' }} />
-                {yardLocations.map(loc => (
-                  <ImagePin key={loc.id} loc={loc} onClick={() => handlePinClick(loc)} isAdmin={isAdmin && mode === 'free'} onLocationUpdate={handleYardUpdate} />
+                <img src="/assets/pihakartta.png" alt="Pihakartta" className="w-full h-full object-cover pointer-events-none opacity-80" />
+                {effectiveYardLocs.map(loc => (
+                  <ImagePin key={loc.id} loc={loc} onClick={() => handlePinClick(loc)} isAdmin={isAdminMode && mode === 'free'} onLocationUpdate={handleYardUpdate} />
                 ))}
               </div>
             </motion.div>
           )}
-
         </AnimatePresence>
 
-        {/* Häivytys reunoille ja alas */}
         <div className={`absolute inset-0 transition-opacity duration-1000 ${mode === 'guided' && mapFocus ? 'opacity-30' : 'opacity-100'} bg-gradient-to-t from-rasala-dark via-rasala-dark/60 to-transparent pointer-events-none`} />
         <div className="absolute inset-0 bg-gradient-to-b from-rasala-dark/80 to-transparent h-40 pointer-events-none" />
       </div>
 
-      {/* ── Elokuvamainen Kortti (Tournee tai valittu pinni) ── */}
+      {/* ── Elokuvamainen Kortti ── */}
       <div className="relative z-10 flex-grow w-full max-w-4xl mx-auto px-4 py-4 flex flex-col justify-end sm:justify-center pointer-events-none">
         <AnimatePresence mode="wait">
           {((mode === 'guided' && !mapFocus) || (mode === 'free' && selectedPin)) && activeTarget && (
-            <motion.div
-              key={activeTarget.id}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className={`cinema-card border ${eraBorder[era] || 'border-white/20'} overflow-hidden shadow-cinema backdrop-blur-xl bg-rasala-dark/80 pointer-events-auto`}
-            >
+            <motion.div key={activeTarget.id} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className={`cinema-card border ${eraBorder[era] || 'border-white/20'} overflow-hidden shadow-cinema backdrop-blur-xl bg-rasala-dark/80 pointer-events-auto`}>
               <div className="relative group cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
                 <img
-                  src={isKotitontti && hasKotitaloImages ? visibleKotitaloImages[0] : (activeTarget.image || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`)}
+                  src={isKotitontti && kotitaloImages.length > 0 ? kotitaloImages[0].url : (activeTargetImageObj?.url || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`)}
                   alt={activeTarget.title}
                   className={`w-full object-cover transition-all duration-700 era-${era}`}
-                  style={{ 
-                    maxHeight: '40vh', 
-                    width: '100%', 
-                    objectFit: 'cover',
-                    transform: `rotate(${isKotitontti && hasKotitaloImages ? (rotations[visibleKotitaloImages[0]] || 0) : (activeTarget.image ? (rotations[activeTarget.image] || 0) : 0)}deg)`
-                  }}
+                  style={{ maxHeight: '40vh', width: '100%', objectFit: 'cover', transform: `rotate(${isKotitontti && kotitaloImages.length > 0 ? (kotitaloImages[0].rotation || 0) : (activeTargetImageObj?.rotation || 0)}deg)` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-rasala-dark/90 to-transparent opacity-80" />
-                
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
                   <ZoomIn size={40} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                 </div>
-
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm ${eraColor[era]}`}>
-                    {eraLabel[era] || 'Muisto'}
-                  </span>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm ${eraColor[era]}`}>{eraLabel[era] || 'Muisto'}</span>
                 </div>
-                {/* X-nappi: Sulkee kortin ja palaa aina vapaaseen selailuun */}
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setMode('free');
-                    setSelectedPin(null); 
-                  }} 
-                  className="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors z-50 shadow-lg"
-                  title="Sulje ja siirry vapaaseen selailuun"
-                >
+                <button onClick={(e) => { e.stopPropagation(); setMode('free'); setSelectedPin(null); }} className="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors z-50 shadow-lg">
                   <X size={18} />
                 </button>
               </div>
 
               <div className="p-6 sm:p-8">
-                <h3 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
-                  {activeTarget.title}
-                </h3>
-                <p className="text-white/80 text-base sm:text-lg leading-relaxed">
-                  {activeTarget.description}
-                </p>
-                {activeTarget.people && activeTarget.people.length > 0 && (
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {activeTarget.people.map((p: string) => (
-                      <span key={p} className="text-xs font-bold px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/50">
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Jos tämä on Kotitontti (village view), näytetään siirtymänappi Pihakarttaan */}
+                <h3 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">{activeTarget.title}</h3>
+                <p className="text-white/80 text-base sm:text-lg leading-relaxed">{activeTarget.description}</p>
                 {activeTarget.isHome && view === 'village' && (
                   <button onClick={() => { setView('yard'); setMode('free'); setSelectedPin(null); }} className="mt-6 w-full btn-gold py-4 rounded-xl text-sm font-bold shadow-gold">
                     <span>Avaa Pihakartta →</span>
@@ -502,58 +508,21 @@ export const MapView = () => {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Iso teksti lentäessä (vain guided mode) */}
         <AnimatePresence>
           {mode === 'guided' && mapFocus && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-            >
-              <span className={`font-serif text-5xl sm:text-7xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] ${eraColor[era] || 'text-white'}`}>
-                {currentGuidedTarget.title}
-              </span>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className={`font-serif text-5xl sm:text-7xl font-black drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] ${eraColor[era] || 'text-white'}`}>{currentGuidedTarget.title}</span>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* ── Opastetun kierroksen tai Kortin Navigaatio ── */}
+      {/* ── Navigaatio ── */}
       {mode === 'guided' && (
         <div className="relative z-20 w-full max-w-4xl mx-auto px-4 flex justify-between items-center mb-4">
-          <button
-            onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-white/80 hover:border-rasala-gold/40 hover:text-rasala-gold disabled:opacity-20 transition-all shadow-lg"
-          >
-            <ChevronLeft size={20} /> <span className="hidden sm:inline">Edellinen</span>
-          </button>
-          
-          {mapFocus ? (
-            <button 
-              onClick={() => setMapFocus(false)}
-              className="text-white/40 text-xs uppercase tracking-widest hover:text-white transition-colors bg-black/40 px-3 py-1.5 rounded-full"
-            >
-              Lue tarina
-            </button>
-          ) : (
-            <button 
-              onClick={() => setMapFocus(true)}
-              className="text-white/40 text-xs uppercase tracking-widest hover:text-white transition-colors bg-black/40 px-3 py-1.5 rounded-full"
-            >
-              Näytä kartta
-            </button>
-          )}
-
-          <button
-            onClick={() => setCurrentIndex(i => Math.min(activeLocations.length - 1, i + 1))}
-            disabled={currentIndex === activeLocations.length - 1}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-white/80 hover:border-rasala-gold/40 hover:text-rasala-gold disabled:opacity-20 transition-all shadow-lg"
-          >
-            <span className="hidden sm:inline">Seuraava</span> <ChevronRight size={20} />
-          </button>
+          <button onClick={() => setCurrentIndex(i => Math.max(0, i - 1))} disabled={currentIndex === 0} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-white/80 hover:border-rasala-gold/40 hover:text-rasala-gold disabled:opacity-20 transition-all shadow-lg"><ChevronLeft size={20} /> <span className="hidden sm:inline">Edellinen</span></button>
+          <button onClick={() => setMapFocus(!mapFocus)} className="text-white/40 text-xs uppercase tracking-widest hover:text-white transition-colors bg-black/40 px-3 py-1.5 rounded-full">{mapFocus ? 'Lue tarina' : 'Näytä kartta'}</button>
+          <button onClick={() => setCurrentIndex(i => Math.min(activeLocations.length - 1, i + 1))} disabled={currentIndex === activeLocations.length - 1} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/15 text-white/80 hover:border-rasala-gold/40 hover:text-rasala-gold disabled:opacity-20 transition-all shadow-lg"><span className="hidden sm:inline">Seuraava</span> <ChevronRight size={20} /></button>
         </div>
       )}
 
@@ -563,106 +532,68 @@ export const MapView = () => {
           <Lightbox 
             images={lightboxImages} 
             onClose={() => setLightboxOpen(false)} 
-            isAdmin={isAdmin}
-            onRotate={handleRotate}
-            onHide={(src) => {
-              handleHide(src);
-              setLightboxOpen(false);
-            }}
-            onSaveCaption={handleSaveCaption}
+            isAdmin={isAdminMode}
+            onRotate={(id) => handleImageUpdate(id, { rotation: (((images.find(i=>i.id===id)?.rotation||0)+90)%360) })}
+            onHide={(id) => handleImageUpdate(id, { hidden: true })}
+            onSaveCaption={(id, text) => handleImageUpdate(id, { caption: text })}
           />
         )}
       </AnimatePresence>
+
       {/* ── Nastan Muokkaus Modal (Admin) ── */}
       <AnimatePresence>
         {pinEditorOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: 0.9 }}
-              className="bg-rasala-dark border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative max-h-[90vh] overflow-y-auto"
-            >
-              <button onClick={() => setPinEditorOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors">
-                <X size={20} />
-              </button>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: 0.9 }} className="bg-rasala-dark border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative max-h-[90vh] overflow-y-auto">
+              <button onClick={() => setPinEditorOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"><X size={20} /></button>
               
-              <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-6">
-                {editingPin?.isCustom ? 'Lisää Uusi Nasta' : 'Muokkaa Nastaa'}
-              </h3>
+              <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-6">{editingPin?.isCustom ? 'Lisää Uusi Nasta' : 'Muokkaa Nastaa'}</h3>
               
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Otsikko</label>
-                  <input 
-                    autoFocus type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none"
-                    placeholder="Paikan nimi..."
-                  />
+                  <input autoFocus type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none" />
                 </div>
-
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Aikakausi (Teemaväri)</label>
-                  <select 
-                    value={formData.era} onChange={e => setFormData({ ...formData, era: e.target.value })}
-                    className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none"
-                  >
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Aikakausi</label>
+                  <select value={formData.era} onChange={e => setFormData({ ...formData, era: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none">
                     <option value="historical">Historiallinen (Keltainen)</option>
                     <option value="postwar">Jälleenrakennus (Harmaa)</option>
                     <option value="growth">Kasvukausi (Oranssi)</option>
                     <option value="modern">Nykypäivä (Vihreä)</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Tarina / Kuvaus</label>
-                  <textarea 
-                    value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full h-32 bg-black/50 border border-white/20 rounded-lg p-4 text-white placeholder:text-white/30 focus:border-rasala-gold outline-none resize-none"
-                    placeholder="Kerro muisto tai tarina tähän..."
-                  />
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Kuvaus</label>
+                  <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-32 bg-black/50 border border-white/20 rounded-lg p-4 text-white focus:border-rasala-gold outline-none resize-none" />
                 </div>
-
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Kuva (Valinnainen)</label>
-                  <select 
-                    value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })}
-                    className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none"
-                  >
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Yhdistä Kuva (Firestore ID)</label>
+                  <select value={formData.imageId} onChange={e => setFormData({ ...formData, imageId: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none">
                     <option value="">-- Ei kuvaa --</option>
-                    {allImages.map(url => {
-                      const filename = url.split('/').pop() || '';
-                      return <option key={url} value={url}>{filename}</option>;
-                    })}
+                    {images.map(img => (
+                      <option key={img.id} value={img.id}>{img.filename}</option>
+                    ))}
                   </select>
-                  {formData.image && (
-                    <img src={formData.image} alt="Preview" className="mt-3 w-full h-32 object-cover rounded-lg border border-white/20" />
+                  {formData.imageId && (
+                    <img src={images.find(i=>i.id===formData.imageId)?.url} alt="Preview" className="mt-3 w-full h-32 object-cover rounded-lg border border-white/20" />
                   )}
                 </div>
               </div>
 
               <div className="mt-8 flex justify-between items-center">
                 {!editingPin?.isCustom && editingPin?.id !== 'kotitontti' && editingPin?.id !== 'paarakennus' ? (
-                  <button onClick={deletePin} className="text-red-500 hover:text-red-400 text-sm font-bold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10">
-                    <Trash2 size={16} /> Poista Nasta
-                  </button>
+                  <button onClick={deletePin} className="text-red-500 hover:text-red-400 text-sm font-bold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10"><Trash2 size={16} /> Poista</button>
                 ) : <div />}
-                
                 <div className="flex gap-3">
-                  <button onClick={() => setPinEditorOpen(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors">
-                    Peruuta
-                  </button>
-                  <button onClick={savePin} className="btn-gold px-6 py-2 rounded-xl font-bold flex items-center gap-2">
-                    <Check size={18} /> Tallenna
-                  </button>
+                  <button onClick={() => setPinEditorOpen(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5">Peruuta</button>
+                  <button onClick={savePin} className="btn-gold px-6 py-2 rounded-xl font-bold flex items-center gap-2"><Check size={18} /> Tallenna</button>
                 </div>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };

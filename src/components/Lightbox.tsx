@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Edit3, Save } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LightboxProps {
-  images: { src: string; title: string; year?: number | string; description?: string; rotation?: number }[];
+  images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number }[];
   startIndex?: number;
   onClose: () => void;
   isAdmin?: boolean;
-  onRotate?: (src: string) => void;
-  onHide?: (src: string) => void;
-  onSaveCaption?: (src: string, text: string) => void;
+  onRotate?: (id: string) => void;
+  onHide?: (id: string) => void;
+  onSaveCaption?: (id: string, text: string) => void;
 }
 
 export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption }) => {
@@ -60,20 +60,20 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
         )}
         {isAdmin && onRotate && (
           <button
-            onClick={(e) => { e.stopPropagation(); onRotate(img.src); }}
+            onClick={(e) => { e.stopPropagation(); onRotate(img.id); }}
             className="p-3 rounded-full bg-blue-600/50 hover:bg-blue-500 text-white transition-colors backdrop-blur-md"
             title="Käännä kuvaa"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            <RotateCw size={24} />
           </button>
         )}
         {isAdmin && onHide && (
           <button
-            onClick={(e) => { e.stopPropagation(); onHide(img.src); }}
-            className="p-3 rounded-full bg-gray-600/50 hover:bg-gray-500 text-white transition-colors backdrop-blur-md"
+            onClick={(e) => { e.stopPropagation(); onHide(img.id); }}
+            className="p-3 rounded-full bg-gray-700/50 hover:bg-gray-600 text-white transition-colors backdrop-blur-md"
             title="Piilota kuva"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <Trash2 size={24} />
           </button>
         )}
         <button
@@ -136,15 +136,17 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
                     className="w-full h-32 bg-black/60 border border-white/20 rounded-xl p-4 text-white focus:border-rasala-gold outline-none resize-none"
                   />
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 font-medium">
+                    <button onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors">
                       Peruuta
                     </button>
                     <button 
                       onClick={() => { 
-                        onSaveCaption?.(img.src, editText); 
-                        setIsEditing(false); 
+                        if (onSaveCaption) {
+                          onSaveCaption(img.id, editText);
+                          setIsEditing(false);
+                        }
                       }} 
-                      className="flex items-center gap-2 px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 font-bold"
+                      className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold flex items-center gap-2"
                     >
                       <Save size={18} /> Tallenna
                     </button>

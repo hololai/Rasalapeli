@@ -10,8 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const defaultNavItems = [
-  { path: '/',          label: 'Koti',      icon: Home },
-  { path: '/timeline',  label: 'Aikamatka', icon: Clock },
+  { path: '/',          label: 'Valokuvat', icon: Home },
   { path: '/map',       label: 'Kartta',    icon: Map },
   { path: '/quiz',      label: 'Peli',      icon: HelpCircle },
 ];
