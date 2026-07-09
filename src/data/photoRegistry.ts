@@ -15,7 +15,7 @@
 //  growth     = 1965-1985 (70-luvun tunnelma, Rasala)
 //  modern     = 1985→     (täysvärinen, nykypäivä)
 
-const photos = [
+const photos: any[] = [
   // TÄYTÄ TÄHÄN — Yksi rivi per kuva
   // {
   //   filename: "ranua_vikke_1935.jpg",
