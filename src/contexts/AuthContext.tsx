@@ -42,9 +42,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       if (currentUser) {
         try {
-          // Hae käyttäjän profiili Firestoresta
+          // Hae käyttäjän profiili Firestoresta aikakatkaisulla (estää 10s jumit)
           const userRef = doc(db, 'users', currentUser.uid);
-          const userSnap = await getDoc(userRef);
+          const getDocPromise = getDoc(userRef);
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+          
+          const userSnap = await Promise.race([getDocPromise, timeoutPromise]) as any;
           
           if (userSnap.exists()) {
             setProfile(userSnap.data() as UserProfile);
@@ -78,7 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: assignedRole,
               createdAt: serverTimestamp(),
             };
-            await setDoc(userRef, newProfile);
+            // Ei jäädä odottamaan setDocin valmistumista (jos verkko yskii), tallennetaan taustalla
+            setDoc(userRef, newProfile).catch(e => console.error("setDoc taustavirhe:", e));
             setProfile(newProfile);
           }
         } catch (error) {
