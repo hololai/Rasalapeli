@@ -23,6 +23,7 @@ export const Quiz = () => {
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Peli-statet
   const [currentLevel, setCurrentLevel] = useState(0);
@@ -51,6 +52,7 @@ export const Quiz = () => {
       setQuestions(fetched);
     } catch (e) {
       console.error("Virhe kysymysten latauksessa:", e);
+      setFetchError("Tietokantayhteys epäonnistui. Tarkista tietoturvasäännöt Firebasesta.");
     } finally {
       setLoading(false);
     }
@@ -73,6 +75,9 @@ export const Quiz = () => {
       await fetchQuestions();
     } catch (e) {
       console.error("Virhe alustuksessa:", e);
+      alert("Tietokanta hylkäsi pyynnön! Varmista, että olet lisännyt tietoturvasäännöt Firebasen konsoliin.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,7 +163,21 @@ export const Quiz = () => {
 
   // ── RENDERÖINTI ──
   if (loading) {
-    return <div className="min-h-screen bg-rasala-dark flex items-center justify-center text-rasala-gold">Ladataan peliä...</div>;
+    return <div className="min-h-screen bg-rasala-dark flex items-center justify-center text-rasala-gold">Ladataan tietovisaa...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-rasala-dark flex items-center justify-center px-4">
+        <div className="bg-red-900/20 border border-red-500/50 p-8 rounded-2xl text-center max-w-lg">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">Tietokantavirhe</h2>
+          <p className="text-white/80 mb-6">{fetchError}</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-red-600/30 text-red-200 border border-red-500/50 rounded-lg hover:bg-red-600/50 transition">
+            Yritä uudelleen
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Admin näkymä

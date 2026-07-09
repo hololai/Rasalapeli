@@ -8,6 +8,8 @@ import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
 import { collection, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore';
+import { storage } from '../firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Default mock data used ONLY if Firestore is totally empty
 import { mapLocationsCollection } from '../data/mockData';
@@ -90,10 +92,10 @@ export const MapView = () => {
   const [pendingImageChanges, setPendingImageChanges] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Nastojen muokkaus -state
   const [pinEditorOpen, setPinEditorOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '', customImageUrl: '' });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -131,12 +133,13 @@ export const MapView = () => {
   const handlePinClick = (loc: any) => {
     if (isAdminMode && mode === 'free') {
       setEditingPin(loc);
-      setFormData({ 
-        title: loc.title, 
-        description: loc.description || '', 
-        era: loc.era || 'growth', 
+      setFormData({
+        title: loc.title || '',
+        description: loc.description || '',
+        era: loc.era || 'growth',
         imageId: loc.imageId || '',
-        streetViewIframe: loc.streetViewIframe || ''
+        streetViewIframe: loc.streetViewIframe || '',
+        customImageUrl: loc.customImageUrl || ''
       });
       setPinEditorOpen(true);
       return;
@@ -251,7 +254,15 @@ export const MapView = () => {
     return match ? match[1] : '';
   };
 
-  const lightboxImages = isKotitontti && kotitaloImages.length > 0
+  const lightboxImages = activeTarget?.customImageUrl
+    ? [{
+        id: activeTarget.id,
+        src: activeTarget.customImageUrl,
+        title: activeTarget.title,
+        description: activeTarget.description,
+        rotation: 0,
+      }]
+    : isKotitontti && kotitaloImages.length > 0
     ? kotitaloImages.map((img, idx) => ({
         id: img.id,
         src: img.url,
@@ -353,7 +364,7 @@ export const MapView = () => {
                 <MapClickHandler isAdmin={isAdminMode} onMapClick={(lat, lng) => {
                   if (mode !== 'free') return;
                   setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true });
-                  setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
+                  setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '', customImageUrl: '' });
                   setPinEditorOpen(true);
                 }} />
                 <MapFlyTo center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} zoom={15} isGuided={mode === 'guided'} />
@@ -394,10 +405,10 @@ export const MapView = () => {
                   />
                 ) : (
                   <img
-                    src={isKotitontti && kotitaloImages.length > 0 ? kotitaloImages[0].url : (activeTargetImageObj?.url || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`)}
+                    src={activeTarget.customImageUrl || (isKotitontti && kotitaloImages.length > 0 ? kotitaloImages[0].url : (activeTargetImageObj?.url || `https://placehold.co/1200x600/1c2b1e/d4af37?text=${encodeURIComponent(activeTarget.title)}`))}
                     alt={activeTarget.title}
                     className={`w-full object-cover transition-all duration-700 era-${era}`}
-                    style={{ maxHeight: '40vh', width: '100%', objectFit: 'cover', transform: `rotate(${isKotitontti && kotitaloImages.length > 0 ? (kotitaloImages[0].rotation || 0) : (activeTargetImageObj?.rotation || 0)}deg)` }}
+                    style={{ maxHeight: '40vh', width: '100%', objectFit: 'cover', transform: `rotate(${activeTarget.customImageUrl ? 0 : isKotitontti && kotitaloImages.length > 0 ? (kotitaloImages[0].rotation || 0) : (activeTargetImageObj?.rotation || 0)}deg)` }}
                   />
                 )}
 
@@ -463,6 +474,15 @@ export const MapView = () => {
               <button onClick={() => setPinEditorOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"><X size={20} /></button>
               
               <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-6">{editingPin?.isCustom ? 'Lisää Uusi Nasta' : 'Muokkaa Nastaa'}</h3>
+
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+                  <div className="text-rasala-gold font-bold flex flex-col items-center">
+                    <div className="w-8 h-8 border-4 border-rasala-gold border-t-transparent rounded-full animate-spin mb-3"></div>
+                    Ladataan kuvaa...
+                  </div>
+                </div>
+              )}
               
               <div className="flex flex-col gap-4">
                 <div>
@@ -488,16 +508,44 @@ export const MapView = () => {
                   <span className="text-[10px] text-white/40 mt-1 block">Korvaa valokuvan, jos asetettu. Jätä tyhjäksi näyttääksesi tavallisen kuvan.</span>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Yhdistä Kuva (Firestore ID)</label>
-                  <select value={formData.imageId} onChange={e => setFormData({ ...formData, imageId: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none">
-                    <option value="">-- Ei kuvaa --</option>
-                    {images.map(img => (
-                      <option key={img.id} value={img.id}>{img.filename}</option>
-                    ))}
-                  </select>
-                  {formData.imageId && (
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Nastan Kuva</label>
+                  <div className="flex items-center gap-4">
+                    <label className="cursor-pointer btn-gold px-4 py-2 rounded-xl text-sm font-bold hover:bg-yellow-400 transition-colors">
+                      Lataa kuva tietokoneelta
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setUploadingImage(true);
+                            const fileName = `map_images/${Date.now()}_${file.name}`;
+                            const storageRef = ref(storage, fileName);
+                            await uploadBytes(storageRef, file);
+                            const url = await getDownloadURL(storageRef);
+                            setFormData({ ...formData, customImageUrl: url, imageId: '' });
+                          } catch (error) {
+                            console.error("Virhe kuvan latauksessa:", error);
+                            alert("Kuvan lataus epäonnistui.");
+                          } finally {
+                            setUploadingImage(false);
+                          }
+                        }} 
+                      />
+                    </label>
+                    {(formData.customImageUrl || formData.imageId) && (
+                      <button onClick={() => setFormData({ ...formData, customImageUrl: '', imageId: '' })} className="text-red-400 text-sm hover:text-red-300">
+                        Poista kuva
+                      </button>
+                    )}
+                  </div>
+                  {formData.customImageUrl ? (
+                    <img src={formData.customImageUrl} alt="Preview" className="mt-3 w-full h-32 object-cover rounded-lg border border-white/20" />
+                  ) : formData.imageId ? (
                     <img src={images.find(i=>i.id===formData.imageId)?.url} alt="Preview" className="mt-3 w-full h-32 object-cover rounded-lg border border-white/20" />
-                  )}
+                  ) : null}
                 </div>
               </div>
 
