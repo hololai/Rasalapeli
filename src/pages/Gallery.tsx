@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle } from 'lucide-react';
+import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
 import { ImageUploader } from '../components/ImageUploader';
@@ -15,7 +16,23 @@ interface GalleryImage {
   caption: string;    
   rotation: number;
   hidden: boolean;
+  orderIndex?: number;
 }
+
+const DRIVE_LINKS: Record<string, string> = {
+  '1910-luku': 'https://drive.google.com/drive/folders/1ZW2_x1sAC-LqaNGrNYpYhBRYjTTNROzy?usp=sharing',
+  '1920-luku': 'https://drive.google.com/drive/folders/1iQR5SFksDo_4PNGdrN1E_FrZBHibxR_P?usp=sharing',
+  '1930-luku': 'https://drive.google.com/drive/folders/1c49y4PjgRteh_XsL4Re2Biy0AhjWCpRo?usp=sharing',
+  '1940-luku': 'https://drive.google.com/drive/folders/1yKIrNmn-jDgQupH0Xo8rbFWhfW-0rkAg?usp=sharing',
+  '1950-luku': 'https://drive.google.com/drive/folders/1jsX1LMsezlu8S9hsWdSJSwotCKb-urzq?usp=sharing',
+  '1960-luku': 'https://drive.google.com/drive/folders/1wtWPKfdPMSgWCVYho8FOnn8iEjgrZHdD?usp=sharing',
+  '1970-luku': 'https://drive.google.com/drive/folders/1W9jn-tuAR1BVfzaSbnT3mY23KUNePGm-?usp=sharing',
+  '1980-luku': 'https://drive.google.com/drive/folders/1pcKMOiSyOiNXoW86A2umO9SCJkXzfjcX?usp=sharing',
+  '1990-luku': 'https://drive.google.com/drive/folders/1Of_Ru5wzE1vUUWiAzlSYqnbzfIBInd_w?usp=sharing',
+  '2000-luku': 'https://drive.google.com/drive/folders/1bM7m6pH9ndtNzPwuZuWziv99TiGc_ZVa?usp=sharing',
+  'Järjestämätön': 'https://drive.google.com/drive/folders/1KSs4GwrCunigEx95oHBCwVHB4vilCkvs?usp=sharing',
+  'Rasala': 'https://drive.google.com/drive/folders/1NUhKc8Ofwtc0eIJYtEJ6Z2MWcsXkoWJy?usp=sharing',
+};
 
 export const Gallery = () => {
   const { profile } = useAuth();
@@ -55,7 +72,8 @@ export const Gallery = () => {
           filename: data.filename || d.id,
           caption: data.caption || '',
           rotation: data.rotation || 0,
-          hidden: data.hidden || false
+          hidden: data.hidden || false,
+          orderIndex: data.orderIndex || 0
         });
       });
       setImages(fetched);
@@ -94,6 +112,25 @@ export const Gallery = () => {
   const handleHide = (id: string) => {
     if (!window.confirm("Haluatko varmasti piilottaa tämän kuvan? Se ei näy enää vieraille.")) return;
     handleUpdate(id, { hidden: true });
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    if (sourceIndex === destinationIndex) return;
+
+    // Kopioidaan näkyvä lista
+    const newItems = Array.from(displayImages);
+    const [reorderedItem] = newItems.splice(sourceIndex, 1);
+    newItems.splice(destinationIndex, 0, reorderedItem);
+
+    // Päivitetään orderIndex jokaiselle, jonka järjestys muuttui
+    newItems.forEach((item, index) => {
+      if (item.orderIndex !== index) {
+        handleUpdate(item.id, { orderIndex: index });
+      }
+    });
   };
 
   const saveAllChangesToDB = async () => {
@@ -138,7 +175,14 @@ export const Gallery = () => {
       list = list.filter(img => img.decade === selectedDecade);
     }
     
-    return list.sort((a, b) => a.decade.localeCompare(b.decade));
+    return list.sort((a, b) => {
+      const decadeDiff = a.decade.localeCompare(b.decade);
+      if (decadeDiff !== 0) return decadeDiff;
+      if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
+        return a.orderIndex - b.orderIndex;
+      }
+      return a.id.localeCompare(b.id);
+    });
   }, [images, pendingChanges, selectedDecade, isAdminMode]);
 
   const decades = useMemo(() => {
@@ -229,6 +273,23 @@ export const Gallery = () => {
           ))}
         </div>
 
+        {/* ── Alkuperäisten kuvien latauslinkki (Google Drive) ── */}
+        {selectedDecade !== 'Kaikki' && DRIVE_LINKS[selectedDecade] && (
+          <div className="mb-10 flex justify-center sm:justify-start">
+            <a 
+              href={DRIVE_LINKS[selectedDecade]} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-600 transition-colors shadow-lg group"
+            >
+              <Download className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span className="text-stone-200 font-medium text-sm sm:text-base">
+                Lataa {selectedDecade}n alkuperäiset kuvat (Google Drive)
+              </span>
+            </a>
+          </div>
+        )}
+
         {/* ── Kuvagalleria ── */}
         {loading ? (
           <div className="text-center py-20 text-white/40 flex flex-col items-center">
@@ -239,6 +300,81 @@ export const Gallery = () => {
           <div className="text-center py-20 text-white/40">
             <p className="text-xl">Ei kuvia valitulta vuosikymmeneltä. Aja kuvien migraatio Hallintapaneelista, jos kuvat puuttuvat!</p>
           </div>
+        ) : isAdminMode ? (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="gallery">
+              {(provided) => (
+                <div 
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                >
+                  {displayImages.map((img, index) => (
+                    <Draggable key={img.id} draggableId={img.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`relative group rounded-2xl overflow-hidden bg-black/50 border shadow-cinema aspect-[4/3] ${img.hidden ? 'border-red-500/50 opacity-60' : 'border-white/10'} ${snapshot.isDragging ? 'z-50 shadow-2xl scale-105 opacity-100 border-amber-500' : ''}`}
+                        >
+                          <img 
+                            src={img.path} 
+                            alt={img.filename} 
+                            className="w-full h-full object-cover transition-transform duration-700 cursor-zoom-in"
+                            style={{ transform: `scale(1.05) rotate(${img.rotation}deg)` }}
+                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                            loading="lazy"
+                          />
+                          
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none opacity-80" />
+
+                          {/* Tarttumakahva raahaamista varten */}
+                          <div 
+                            {...provided.dragHandleProps} 
+                            className="absolute top-2 left-2 p-2 bg-black/60 hover:bg-amber-600 text-white rounded-lg cursor-grab active:cursor-grabbing backdrop-blur-md transition-colors"
+                            title="Raahaa kuvaa muuttaaksesi järjestystä"
+                          >
+                            <GripHorizontal size={20} />
+                          </div>
+
+                          <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
+                            <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-2 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
+                              <RotateCw size={16} />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); }} className="p-2 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
+                              <Edit3 size={16} />
+                            </button>
+                            {img.hidden ? (
+                              <div className="p-2 bg-red-500/80 rounded-full text-white backdrop-blur-sm" title="Piilotettu vieraiden näkyviltä">
+                                <Lock size={16} />
+                              </div>
+                            ) : (
+                              <button onClick={(e) => { e.stopPropagation(); handleHide(img.id); }} className="p-2 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Piilota vierailta">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
+                            <p className="text-white/90 text-sm font-medium drop-shadow-md mb-1">{img.caption || "Ei kuvatekstiä"}</p>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-rasala-gold font-bold bg-black/50 px-2 py-0.5 rounded-full">{img.decade}</span>
+                              <span className="text-white/50">{img.filename}</span>
+                            </div>
+                          </div>
+
+                          {pendingChanges[img.id] && (
+                            <div className="absolute inset-0 border-2 border-amber-500 rounded-2xl pointer-events-none animate-pulse"></div>
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         ) : (
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             <AnimatePresence>
@@ -283,38 +419,6 @@ export const Gallery = () => {
                       {img.caption || <span className="text-white/30 italic">Ei kuvatekstiä...</span>}
                     </p>
                   </div>
-
-                  {isAdminMode && (
-                    <div className="absolute top-3 right-3 flex flex-col gap-2 z-50">
-                      <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setEditCaptionText(img.caption || ''); 
-                          setEditingImage(img); 
-                        }}
-                        className="p-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white shadow-xl border-2 border-amber-400 transition-all"
-                        title="Muokkaa kuvatekstiä"
-                      >
-                        <Edit3 size={18} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }}
-                        className="p-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-xl border-2 border-blue-400 transition-all"
-                        title="Käännä kuvaa"
-                      >
-                        <RotateCw size={18} />
-                      </button>
-                      {!img.hidden && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleHide(img.id); }}
-                          className="p-2.5 rounded-full bg-gray-700 hover:bg-gray-600 text-white shadow-xl border-2 border-gray-500 transition-all"
-                          title="Piilota kuva (Poista näkyvistä)"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

@@ -20,7 +20,7 @@ export const Navbar = () => {
   const { user, profile, signInWithGoogle, logout } = useAuth();
 
   const navItems = (profile?.role === 'superadmin' || profile?.role === 'admin')
-    ? [...defaultNavItems, { path: '/admin', label: 'Admin', icon: ShieldAlert }] 
+    ? [...defaultNavItems, { path: '/admin', label: 'Käyttäjähallinta', icon: ShieldAlert }] 
     : defaultNavItems;
 
   return (
