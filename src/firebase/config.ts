@@ -5,7 +5,7 @@ import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyArSViLuagzKbiJTO5uBv85eAIQRRAgOtM",
-  authDomain: "kuvaohjelma.firebaseapp.com",
+  authDomain: typeof window !== 'undefined' ? window.location.hostname : "kuvaohjelma.firebaseapp.com",
   projectId: "kuvaohjelma",
   storageBucket: "kuvaohjelma.firebasestorage.app",
   messagingSenderId: "150396211718",
