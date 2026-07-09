@@ -6,6 +6,7 @@ import { ImageUploader } from '../components/ImageUploader';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import localImagesData from '../data/localImages.json';
 
 interface GalleryImage {
   id: string;         // Firestore doc ID (tiedostonimi ilman päätettä)
@@ -46,8 +47,7 @@ export const Gallery = () => {
       setLoading(true);
       // Ohitetaan Firestore täysin väliaikaisesti, koska se jumiutuu.
       // Ladataan suoraan lokaalista tiedostosta kaikki 732 kuvaa!
-      const localImages = await import('../data/localImages.json');
-      const fetched: GalleryImage[] = localImages.default.map((data: any) => ({
+      const fetched: GalleryImage[] = localImagesData.map((data: any) => ({
         id: data.id,
         path: data.url,
         decade: data.year ? `${Math.floor(data.year / 10) * 10}-luku` : 'Tuntematon',
