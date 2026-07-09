@@ -68,61 +68,11 @@ function MapClickHandler({ isAdmin, onMapClick }: { isAdmin: boolean, onMapClick
   return null;
 }
 
-// Yksittäinen nasta Pihakartassa (Image Map)
-const ImagePin = ({ loc, onClick, isAdmin, onLocationUpdate }: any) => {
-  const [copied, setCopied] = useState(false);
-  const handleDragEnd = (event: any, info: any) => {
-    const container = document.getElementById('yard-map-container');
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const relativeX = info.point.x - rect.left;
-    const relativeY = info.point.y - rect.top;
-    const percentX = Math.max(0, Math.min(100, Number(((relativeX / rect.width) * 100).toFixed(2))));
-    const percentY = Math.max(0, Math.min(100, Number(((relativeY / rect.height) * 100).toFixed(2))));
-    onLocationUpdate(loc.id, percentX, percentY);
-  };
-  const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(`x: ${loc.x}, y: ${loc.y}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <motion.div
-      className="absolute flex flex-col items-center group z-10"
-      style={{ left: `${loc.x}%`, top: `${loc.y}%` }}
-      drag={isAdmin}
-      dragMomentum={false}
-      onDragEnd={handleDragEnd}
-      initial={{ x: '-50%', y: '-100%' }}
-      whileDrag={{ scale: 1.2, zIndex: 50 }}
-    >
-      <div 
-        className={`relative flex items-center justify-center transition-transform duration-200 ${!isAdmin && 'cursor-pointer group-hover:scale-110'}`}
-        onClick={!isAdmin ? onClick : undefined}
-        dangerouslySetInnerHTML={{ __html: createPushPinIcon('#d4af37').options.html || '' }}
-      />
-      {!isAdmin && <span className="pin-label group-hover:opacity-100 absolute top-full mt-1 text-white bg-black/80 px-2 py-0.5 rounded pointer-events-none">{loc.title}</span>}
-      {isAdmin && (
-        <div className="absolute bottom-full mb-2 bg-black/80 backdrop-blur-md border border-rasala-gold/30 rounded-lg p-2 text-xs flex flex-col items-center shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none group-hover:pointer-events-auto">
-          <span className="font-bold text-rasala-gold mb-1">{loc.title}</span>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-white/70 bg-black/50 px-1.5 py-0.5 rounded">x: {loc.x}, y: {loc.y}</span>
-            <button onClick={handleCopy} className="p-1 hover:text-rasala-gold text-white/50">{copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}</button>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
 export const MapView = () => {
   const { profile } = useAuth();
   const isAdminUser = profile?.role === 'superadmin' || profile?.role === 'admin';
   const [isAdminMode, setIsAdminMode] = useState(false);
 
-  const [view, setView] = useState<'village' | 'yard'>('village');
   const [mode, setMode] = useState<'free' | 'guided'>('free');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedPin, setSelectedPin] = useState<any | null>(null);
@@ -134,10 +84,9 @@ export const MapView = () => {
   const [images, setImages] = useState<any[]>([]);
   // Locations from Firestore
   const [villageLocations, setVillageLocations] = useState<any[]>([]);
-  const [yardLocations, setYardLocations] = useState<any[]>([]);
 
   // Pending changes for Bulk Save
-  const [pendingMapChanges, setPendingMapChanges] = useState<{ village?: any[], yard?: any[] }>({});
+  const [pendingMapChanges, setPendingMapChanges] = useState<any[] | null>(null);
   const [pendingImageChanges, setPendingImageChanges] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -163,10 +112,7 @@ export const MapView = () => {
 
       // Fetch Locations
       const villDoc = await getDoc(doc(db, 'map_locations', 'village'));
-      const yardDoc = await getDoc(doc(db, 'map_locations', 'yard'));
-      
       setVillageLocations(villDoc.exists() ? villDoc.data().locations : mapLocationsCollection.village);
-      setYardLocations(yardDoc.exists() ? yardDoc.data().locations : mapLocationsCollection.yard);
     } catch (e) {
       console.error("Virhe datan haussa:", e);
     } finally {
@@ -175,21 +121,16 @@ export const MapView = () => {
   };
 
   // Get active locations (considering pending changes)
-  const effectiveVillageLocs = pendingMapChanges.village || villageLocations;
-  const effectiveYardLocs = pendingMapChanges.yard || yardLocations;
+  const effectiveVillageLocs = pendingMapChanges || villageLocations;
 
   const handleVillageUpdate = (id: string, lat: number, lng: number) => {
     const newLocs = effectiveVillageLocs.map(loc => loc.id === id ? { ...loc, lat, lng } : loc);
-    setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
-  };
-  const handleYardUpdate = (id: string, x: number, y: number) => {
-    const newLocs = effectiveYardLocs.map(loc => loc.id === id ? { ...loc, x, y } : loc);
-    setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
+    setPendingMapChanges(newLocs);
   };
 
   const handlePinClick = (loc: any) => {
     if (isAdminMode && mode === 'free') {
-      setEditingPin({ ...loc, view: view });
+      setEditingPin(loc);
       setFormData({ 
         title: loc.title, 
         description: loc.description || '', 
@@ -205,38 +146,16 @@ export const MapView = () => {
     }
   };
 
-  const handleYardMapClick = (e: React.MouseEvent) => {
-    if (!isAdminMode || mode !== 'free') return;
-    const container = document.getElementById('yard-map-container');
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const relativeX = e.clientX - rect.left;
-    const relativeY = e.clientY - rect.top;
-    const percentX = Math.max(0, Math.min(100, Number(((relativeX / rect.width) * 100).toFixed(2))));
-    const percentY = Math.max(0, Math.min(100, Number(((relativeY / rect.height) * 100).toFixed(2))));
-    
-    setEditingPin({ id: `yard_custom_${Date.now()}`, x: percentX, y: percentY, isCustom: true, view: 'yard' });
-    setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
-    setPinEditorOpen(true);
-  };
-
   const savePin = () => {
     if (!editingPin) return;
     const isNew = editingPin.isCustom;
     const pinData = { ...editingPin, ...formData, isCustom: false };
-    delete pinData.view; // don't save view property to DB
 
-    if (editingPin.view === 'village') {
-      let newLocs = [...effectiveVillageLocs];
-      if (isNew) newLocs.push(pinData);
-      else newLocs = newLocs.map(loc => loc.id === pinData.id ? pinData : loc);
-      setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
-    } else {
-      let newLocs = [...effectiveYardLocs];
-      if (isNew) newLocs.push(pinData);
-      else newLocs = newLocs.map(loc => loc.id === pinData.id ? pinData : loc);
-      setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
-    }
+    let newLocs = [...effectiveVillageLocs];
+    if (isNew) newLocs.push(pinData);
+    else newLocs = newLocs.map(loc => loc.id === pinData.id ? pinData : loc);
+    
+    setPendingMapChanges(newLocs);
     setPinEditorOpen(false);
     setEditingPin(null);
   };
@@ -247,13 +166,8 @@ export const MapView = () => {
       return;
     }
     if (window.confirm(`Haluatko varmasti poistaa nastan "${editingPin.title}"?`)) {
-      if (editingPin.view === 'village') {
-        const newLocs = effectiveVillageLocs.filter(loc => loc.id !== editingPin.id);
-        setPendingMapChanges(prev => ({ ...prev, village: newLocs }));
-      } else {
-        const newLocs = effectiveYardLocs.filter(loc => loc.id !== editingPin.id);
-        setPendingMapChanges(prev => ({ ...prev, yard: newLocs }));
-      }
+      const newLocs = effectiveVillageLocs.filter(loc => loc.id !== editingPin.id);
+      setPendingMapChanges(newLocs);
       setPinEditorOpen(false);
       setEditingPin(null);
     }
@@ -271,11 +185,8 @@ export const MapView = () => {
       setIsSaving(true);
       const batch = writeBatch(db);
       
-      if (pendingMapChanges.village) {
-        batch.set(doc(db, 'map_locations', 'village'), { locations: pendingMapChanges.village });
-      }
-      if (pendingMapChanges.yard) {
-        batch.set(doc(db, 'map_locations', 'yard'), { locations: pendingMapChanges.yard });
+      if (pendingMapChanges) {
+        batch.set(doc(db, 'map_locations', 'village'), { locations: pendingMapChanges });
       }
 
       Object.keys(pendingImageChanges).forEach(id => {
@@ -284,15 +195,14 @@ export const MapView = () => {
 
       await batch.commit();
 
-      if (pendingMapChanges.village) setVillageLocations(pendingMapChanges.village);
-      if (pendingMapChanges.yard) setYardLocations(pendingMapChanges.yard);
+      if (pendingMapChanges) setVillageLocations(pendingMapChanges);
       
       setImages(prev => prev.map(img => {
         if (pendingImageChanges[img.id]) return { ...img, ...pendingImageChanges[img.id] };
         return img;
       }));
 
-      setPendingMapChanges({});
+      setPendingMapChanges(null);
       setPendingImageChanges({});
       alert("Muutokset tallennettu tietokantaan!");
     } catch (e) {
@@ -303,7 +213,7 @@ export const MapView = () => {
     }
   };
 
-  const activeLocations = view === 'village' ? effectiveVillageLocs : effectiveYardLocs;
+  const activeLocations = effectiveVillageLocs;
   const currentGuidedTarget = activeLocations[currentIndex];
   const activeTarget = mode === 'guided' ? currentGuidedTarget : selectedPin;
   const era = activeTarget?.era || 'growth';
@@ -357,7 +267,7 @@ export const MapView = () => {
         rotation: activeTargetImageObj.rotation || 0,
       }] : [];
 
-  const pendingCount = Object.keys(pendingMapChanges).length + Object.keys(pendingImageChanges).length;
+  const pendingCount = (pendingMapChanges ? 1 : 0) + Object.keys(pendingImageChanges).length;
 
   if (loading) {
     return (
@@ -393,13 +303,8 @@ export const MapView = () => {
       {/* ── Header ── */}
       <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-5 pb-4 max-w-5xl mx-auto w-full gap-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
         <div className="flex items-center gap-3">
-          {view === 'yard' && (
-            <button onClick={() => { setView('village'); setSelectedPin(null); }} className="p-2 rounded-xl bg-black/60 hover:bg-rasala-gold/20 border border-white/10 backdrop-blur-md transition-all shadow-lg">
-              <ArrowLeft size={20} />
-            </button>
-          )}
           <h2 className="font-serif text-2xl sm:text-3xl font-bold flex items-center gap-3">
-            {view === 'village' ? 'Rasala-Tournee' : 'Pihakartta'}
+            Kyläkartta
             {isAdminMode && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full uppercase">Ylläpito</span>}
           </h2>
         </div>
@@ -430,12 +335,10 @@ export const MapView = () => {
 
       {/* ── Taustakartta ── */}
       <div 
-        className={`absolute inset-0 z-0 transition-all duration-1000 ${mode === 'guided' && mapFocus ? 'opacity-100' : 'opacity-50'} ${view === 'village' ? `era-${era}` : ''}`}
+        className={`absolute inset-0 z-0 transition-all duration-1000 ${mode === 'guided' && mapFocus ? 'opacity-100' : 'opacity-50'} era-${era}`}
         style={{ pointerEvents: mode === 'free' && !selectedPin ? 'auto' : 'none' }}
       >
         <AnimatePresence mode="wait">
-          
-          {view === 'village' && (
             <motion.div key="village" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`relative w-full h-full ${isAdminMode && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}>
               <MapContainer 
                 center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} 
@@ -449,7 +352,7 @@ export const MapView = () => {
                 <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <MapClickHandler isAdmin={isAdminMode} onMapClick={(lat, lng) => {
                   if (mode !== 'free') return;
-                  setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true, view: 'village' });
+                  setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true });
                   setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
                   setPinEditorOpen(true);
                 }} />
@@ -466,18 +369,6 @@ export const MapView = () => {
                 ))}
               </MapContainer>
             </motion.div>
-          )}
-
-          {view === 'yard' && (
-            <motion.div key="yard" id="yard-map-container" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`relative w-full h-full flex items-center justify-center bg-rasala-dark ${isAdminMode && mode === 'free' ? 'border-2 border-red-500/50' : ''}`}>
-              <div id="yard-map-container" className="relative w-full max-w-6xl mx-auto" style={{ aspectRatio: '16/10' }} onClick={handleYardMapClick}>
-                <img src="/assets/pihakartta.png" alt="Pihakartta" className="w-full h-full object-cover pointer-events-none opacity-80" />
-                {effectiveYardLocs.map(loc => (
-                  <ImagePin key={loc.id} loc={loc} onClick={() => handlePinClick(loc)} isAdmin={isAdminMode && mode === 'free'} onLocationUpdate={handleYardUpdate} />
-                ))}
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         <div className={`absolute inset-0 transition-opacity duration-1000 ${mode === 'guided' && mapFocus ? 'opacity-30' : 'opacity-100'} bg-gradient-to-t from-rasala-dark via-rasala-dark/60 to-transparent pointer-events-none`} />
@@ -528,11 +419,6 @@ export const MapView = () => {
               <div className="p-6 sm:p-8">
                 <h3 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">{activeTarget.title}</h3>
                 <p className="text-white/80 text-base sm:text-lg leading-relaxed">{activeTarget.description}</p>
-                {activeTarget.isHome && view === 'village' && (
-                  <button onClick={() => { setView('yard'); setMode('free'); setSelectedPin(null); }} className="mt-6 w-full btn-gold py-4 rounded-xl text-sm font-bold shadow-gold">
-                    <span>Avaa Pihakartta →</span>
-                  </button>
-                )}
               </div>
             </motion.div>
           )}
@@ -616,7 +502,7 @@ export const MapView = () => {
               </div>
 
               <div className="mt-8 flex justify-between items-center">
-                {!editingPin?.isCustom && editingPin?.id !== 'kotitontti' && editingPin?.id !== 'paarakennus' ? (
+                {!editingPin?.isCustom ? (
                   <button onClick={deletePin} className="text-red-500 hover:text-red-400 text-sm font-bold flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10"><Trash2 size={16} /> Poista</button>
                 ) : <div />}
                 <div className="flex gap-3">
