@@ -42,12 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       if (currentUser) {
         try {
-          // Hae käyttäjän profiili Firestoresta aikakatkaisulla (estää 10s jumit)
+          // Hae käyttäjän profiili Firestoresta
           const userRef = doc(db, 'users', currentUser.uid);
-          const getDocPromise = getDoc(userRef);
-          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
-          
-          const userSnap = await Promise.race([getDocPromise, timeoutPromise]) as any;
+          const userSnap = await getDoc(userRef);
           
           if (userSnap.exists()) {
             setProfile(userSnap.data() as UserProfile);
