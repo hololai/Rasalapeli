@@ -77,20 +77,41 @@ export const MigrationTool = () => {
         await uploadBytes(storageRef, blob, { contentType: blob.type });
         const downloadURL = await getDownloadURL(storageRef);
 
-        // 3. Save to Firestore
+        // 3. Save to Firestore (Käytetään REST APIa jumin välttämiseksi)
         setLogs(prev => [...prev, `[${i+1}] Tallennetaan tietokantaan: ${filename}`]);
         const docId = filename.replace(/\.[^/.]+$/, "");
-        await setDoc(doc(db, "images", docId), {
-          url: downloadURL,
-          storagePath: storagePath,
-          filename: filename,
-          decade: decade,
-          year: "",
-          caption: "",
-          rotation: 0,
-          hidden: false,
-          createdAt: new Date()
+        
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error("Ei kirjautumistokenia");
+
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/kuvaohjelma/databases/(default)/documents/images/${docId}`;
+        const docData = {
+          fields: {
+            url: { stringValue: downloadURL },
+            storagePath: { stringValue: storagePath },
+            filename: { stringValue: filename },
+            decade: { stringValue: decade },
+            year: { stringValue: "" },
+            caption: { stringValue: "" },
+            rotation: { integerValue: 0 },
+            hidden: { booleanValue: false },
+            createdAt: { timestampValue: new Date().toISOString() }
+          }
+        };
+
+        const fsRes = await fetch(firestoreUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(docData)
         });
+
+        if (!fsRes.ok) {
+          const errData = await fsRes.json();
+          throw new Error(`Firestore REST virhe: ${errData.error?.message || fsRes.statusText}`);
+        }
 
         setLogs(prev => [...prev, `[${i+1}/${urls.length}] Ladattu: ${filename}`]);
       } catch (err: any) {
