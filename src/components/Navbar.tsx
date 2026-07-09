@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Clock, Map, HelpCircle, LogOut, LogIn, User, ShieldAlert } from 'lucide-react';
+import { Home, Clock, Map, BookOpen, LogOut, LogIn, User, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
 const defaultNavItems = [
   { path: '/',          label: 'Valokuvat', icon: Home },
   { path: '/map',       label: 'Kartta',    icon: Map },
-  { path: '/quiz',      label: 'Peli',      icon: HelpCircle },
+  { path: '/quiz',      label: 'Tietovisa', icon: BookOpen },
 ];
 
 export const Navbar = () => {

@@ -167,7 +167,7 @@ export const Quiz = () => {
       <div className="min-h-screen bg-rasala-dark text-white pb-24 sm:pt-16 px-4">
         <div className="max-w-3xl mx-auto pt-6">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="font-serif text-3xl font-bold text-rasala-gold">Pelin Ylläpito</h2>
+            <h2 className="font-serif text-3xl font-bold text-rasala-gold">Tietovisan Ylläpito</h2>
             <button onClick={() => setIsAdminMode(false)} className="btn-gold px-4 py-2 text-sm rounded-full flex items-center gap-2">
               <Unlock size={16} /> Sulje Ylläpito
             </button>
@@ -328,7 +328,7 @@ export const Quiz = () => {
         )}
         <div className="text-white/50 text-center">
           <Trophy size={48} className="mx-auto mb-4 opacity-50" />
-          <p>Peliä päivitetään parhaillaan. Palaa pian uudelleen!</p>
+          <p>Tietovisaa päivitetään parhaillaan. Palaa pian uudelleen!</p>
         </div>
       </div>
     );
@@ -352,7 +352,7 @@ export const Quiz = () => {
         <div className="flex items-center justify-center gap-3 mb-6 mt-12 sm:mt-0">
           <Search size={28} className="text-rasala-gold" />
           <h2 className="font-serif text-3xl font-bold">
-            <span className="gold-shimmer">Salapoliisipeli</span>
+            <span className="gold-shimmer">Tietovisa</span>
           </h2>
         </div>
 
