@@ -450,7 +450,7 @@ export const MapView = () => {
                 <MapClickHandler isAdmin={isAdminMode} onMapClick={(lat, lng) => {
                   if (mode !== 'free') return;
                   setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true, view: 'village' });
-                  setFormData({ title: '', description: '', era: 'growth', imageId: '' });
+                  setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '' });
                   setPinEditorOpen(true);
                 }} />
                 <MapFlyTo center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} zoom={15} isGuided={mode === 'guided'} />
