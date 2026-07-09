@@ -44,23 +44,21 @@ export const Gallery = () => {
   const fetchImages = async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(collection(db, 'images'));
-      const fetched: GalleryImage[] = [];
-      snap.forEach(d => {
-        const data = d.data();
-        fetched.push({
-          id: d.id,
-          path: data.url,
-          decade: data.decade || 'Tuntematon',
-          filename: data.filename || d.id,
-          caption: data.caption || '',
-          rotation: data.rotation || 0,
-          hidden: data.hidden || false
-        });
-      });
+      // Ohitetaan Firestore täysin väliaikaisesti, koska se jumiutuu.
+      // Ladataan suoraan lokaalista tiedostosta kaikki 732 kuvaa!
+      const localImages = await import('../data/localImages.json');
+      const fetched: GalleryImage[] = localImages.default.map((data: any) => ({
+        id: data.id,
+        path: data.url,
+        decade: data.year ? `${Math.floor(data.year / 10) * 10}-luku` : 'Tuntematon',
+        filename: data.filename,
+        caption: data.title || '',
+        rotation: 0,
+        hidden: false
+      }));
       setImages(fetched);
     } catch (e) {
-      console.error("Virhe kuvien haussa:", e);
+      console.error("Virhe kuvien latauksessa paikallisesta tiedostosta:", e);
     } finally {
       setLoading(false);
     }
