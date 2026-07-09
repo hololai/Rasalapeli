@@ -25,12 +25,14 @@ service cloud.firestore {
 
     match /images/{imageId} {
       allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow update: if request.auth != null && (isSuperAdmin() || isAdmin());
       allow create, delete: if request.auth != null && (isSuperAdmin() || isAdmin());
     }
 
     match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId && 
+                    (request.resource.data.role == 'pending' || 
+                    (request.auth.token.email != null && request.auth.token.email == 'heikki.laivamaa@gmail.com'));
       allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin() || isAdmin());
       
       // SUPERADMIN SÄÄNTÖ: saa tehdä mitä vain muiden profiileille

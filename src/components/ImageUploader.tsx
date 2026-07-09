@@ -62,7 +62,8 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
         caption: caption,
         rotation: 0,
         hidden: false,
-        createdAt: new Date()
+        createdAt: new Date(),
+        orderIndex: -Date.now()
       });
 
       // Nollaa tila

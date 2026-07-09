@@ -17,19 +17,20 @@ interface GalleryImage {
   rotation: number;
   hidden: boolean;
   orderIndex?: number;
+  createdAt?: any;
 }
 
 const DRIVE_LINKS: Record<string, string> = {
-  '1910-luku': 'https://drive.google.com/drive/folders/1ZW2_x1sAC-LqaNGrNYpYhBRYjTTNROzy?usp=sharing',
-  '1920-luku': 'https://drive.google.com/drive/folders/1iQR5SFksDo_4PNGdrN1E_FrZBHibxR_P?usp=sharing',
-  '1930-luku': 'https://drive.google.com/drive/folders/1c49y4PjgRteh_XsL4Re2Biy0AhjWCpRo?usp=sharing',
-  '1940-luku': 'https://drive.google.com/drive/folders/1yKIrNmn-jDgQupH0Xo8rbFWhfW-0rkAg?usp=sharing',
-  '1950-luku': 'https://drive.google.com/drive/folders/1jsX1LMsezlu8S9hsWdSJSwotCKb-urzq?usp=sharing',
-  '1960-luku': 'https://drive.google.com/drive/folders/1wtWPKfdPMSgWCVYho8FOnn8iEjgrZHdD?usp=sharing',
-  '1970-luku': 'https://drive.google.com/drive/folders/1W9jn-tuAR1BVfzaSbnT3mY23KUNePGm-?usp=sharing',
-  '1980-luku': 'https://drive.google.com/drive/folders/1pcKMOiSyOiNXoW86A2umO9SCJkXzfjcX?usp=sharing',
-  '1990-luku': 'https://drive.google.com/drive/folders/1Of_Ru5wzE1vUUWiAzlSYqnbzfIBInd_w?usp=sharing',
-  '2000-luku': 'https://drive.google.com/drive/folders/1bM7m6pH9ndtNzPwuZuWziv99TiGc_ZVa?usp=sharing',
+  '1910': 'https://drive.google.com/drive/folders/1ZW2_x1sAC-LqaNGrNYpYhBRYjTTNROzy?usp=sharing',
+  '1920': 'https://drive.google.com/drive/folders/1iQR5SFksDo_4PNGdrN1E_FrZBHibxR_P?usp=sharing',
+  '1930': 'https://drive.google.com/drive/folders/1c49y4PjgRteh_XsL4Re2Biy0AhjWCpRo?usp=sharing',
+  '1940': 'https://drive.google.com/drive/folders/1yKIrNmn-jDgQupH0Xo8rbFWhfW-0rkAg?usp=sharing',
+  '1950': 'https://drive.google.com/drive/folders/1jsX1LMsezlu8S9hsWdSJSwotCKb-urzq?usp=sharing',
+  '1960': 'https://drive.google.com/drive/folders/1wtWPKfdPMSgWCVYho8FOnn8iEjgrZHdD?usp=sharing',
+  '1970': 'https://drive.google.com/drive/folders/1W9jn-tuAR1BVfzaSbnT3mY23KUNePGm-?usp=sharing',
+  '1980': 'https://drive.google.com/drive/folders/1pcKMOiSyOiNXoW86A2umO9SCJkXzfjcX?usp=sharing',
+  '1990': 'https://drive.google.com/drive/folders/1Of_Ru5wzE1vUUWiAzlSYqnbzfIBInd_w?usp=sharing',
+  '2000': 'https://drive.google.com/drive/folders/1bM7m6pH9ndtNzPwuZuWziv99TiGc_ZVa?usp=sharing',
   'Järjestämätön': 'https://drive.google.com/drive/folders/1KSs4GwrCunigEx95oHBCwVHB4vilCkvs?usp=sharing',
   'Rasala': 'https://drive.google.com/drive/folders/1NUhKc8Ofwtc0eIJYtEJ6Z2MWcsXkoWJy?usp=sharing',
 };
@@ -68,12 +69,13 @@ export const Gallery = () => {
         fetched.push({
           id: d.id,
           path: data.url,
-          decade: data.decade || 'Tuntematon',
+          decade: (data.decade || 'Tuntematon').replace('-luku', ''),
           filename: data.filename || d.id,
           caption: data.caption || '',
           rotation: data.rotation || 0,
           hidden: data.hidden || false,
-          orderIndex: data.orderIndex || 0
+          orderIndex: data.orderIndex || 0,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0)
         });
       });
       setImages(fetched);
@@ -338,18 +340,18 @@ export const Gallery = () => {
                           </div>
 
                           <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
-                            <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-2 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
+                            <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
                               <RotateCw size={16} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); }} className="p-2 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
                               <Edit3 size={16} />
                             </button>
                             {img.hidden ? (
-                              <div className="p-2 bg-red-500/80 rounded-full text-white backdrop-blur-sm" title="Piilotettu vieraiden näkyviltä">
+                              <div className="p-3.5 bg-red-500/80 rounded-full text-white backdrop-blur-sm" title="Piilotettu vieraiden näkyviltä">
                                 <Lock size={16} />
                               </div>
                             ) : (
-                              <button onClick={(e) => { e.stopPropagation(); handleHide(img.id); }} className="p-2 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Piilota vierailta">
+                              <button onClick={(e) => { e.stopPropagation(); handleHide(img.id); }} className="p-3.5 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Piilota vierailta">
                                 <Trash2 size={16} />
                               </button>
                             )}
@@ -386,7 +388,10 @@ export const Gallery = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3 }}
-                  className={`relative group rounded-2xl overflow-hidden bg-black/50 border shadow-cinema aspect-[4/3] ${img.hidden ? 'border-red-500/50 opacity-60' : 'border-white/10'}`}
+                  className={`relative group rounded-2xl overflow-hidden bg-black/50 border shadow-cinema aspect-[4/3] ${
+                    img.hidden ? 'border-red-500/50 opacity-60' : 
+                    (img.createdAt && (Date.now() - img.createdAt.getTime() < 15 * 60 * 1000)) ? 'border-rasala-gold border-2 shadow-[0_0_15px_rgba(212,175,55,0.6)]' : 'border-white/10'
+                  }`}
                 >
                   <img 
                     src={img.path} 
@@ -410,6 +415,11 @@ export const Gallery = () => {
                     {img.hidden && (
                       <div className="bg-red-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-red-200 border border-red-500/50 flex items-center gap-1">
                         <Trash2 size={12} /> Piilotettu
+                      </div>
+                    )}
+                    {img.createdAt && (Date.now() - img.createdAt.getTime() < 15 * 60 * 1000) && (
+                      <div className="bg-rasala-gold backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-amber-900 shadow-lg border border-yellow-200 animate-pulse">
+                        UUSI
                       </div>
                     )}
                   </div>
