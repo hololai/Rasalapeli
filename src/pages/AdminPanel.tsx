@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth, UserProfile, UserRole } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import type { UserProfile, UserRole } from '../contexts/AuthContext';
 import { Shield, ShieldAlert, Trash2, User as UserIcon } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
