@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 # Kuvat jätetään pois
-public/assets/
+public/assets_raw/

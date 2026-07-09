@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
 
 // Hae kaikki kuvat public/assets -kansiosta ja sen alikansioista (Vite hoitaa tämän build-aikana)
-const rawImages = import.meta.glob('/public/assets/**/*.{jpg,jpeg,png,JPG,JPEG,PNG}', { eager: true, query: '?url', import: 'default' });
+const rawImages = import.meta.glob('/public/assets/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
 
 // Tyyppi kuvalle
 interface GalleryImage {

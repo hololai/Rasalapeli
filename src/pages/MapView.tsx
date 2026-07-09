@@ -8,11 +8,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Hae Kotitalon kuvat kansiosta dynaamisesti
-const kotitaloImagesRaw = import.meta.glob('/public/assets/KOTITALO/**/*.{jpg,jpeg,png,JPG,JPEG,PNG}', { eager: true, query: '?url', import: 'default' });
+const kotitaloImagesRaw = import.meta.glob('/public/assets/KOTITALO/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
 const kotitaloImages = Array.from(new Set(Object.values(kotitaloImagesRaw).map(url => url as string)));
 
 // Hae KAIKKI kuvat pudotusvalikkoa varten (Nastan luonti)
-const allImagesRaw = import.meta.glob('/public/assets/**/*.{jpg,jpeg,png,JPG,JPEG,PNG}', { eager: true, query: '?url', import: 'default' });
+const allImagesRaw = import.meta.glob('/public/assets/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
 const allImages = Array.from(new Set(Object.values(allImagesRaw).map(url => url as string))).filter(url => !url.toLowerCase().includes('kääntöpuoli') && !url.toLowerCase().includes('kaantopuoli') && !url.toLowerCase().includes('back'));
 
 // Teräväkärkinen SVG-nasta Leafletille
