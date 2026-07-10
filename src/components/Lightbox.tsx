@@ -19,6 +19,10 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
   
   const img = images[current];
 
+  if (!img) {
+    return null;
+  }
+
   // Nollaa edit-tila kun kuva vaihtuu
   useEffect(() => {
     setIsEditing(false);

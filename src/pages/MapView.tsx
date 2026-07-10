@@ -393,7 +393,7 @@ export const MapView = () => {
             <motion.div key={activeTarget.id} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className={`cinema-card border ${eraBorder[era] || 'border-white/20'} overflow-hidden shadow-cinema backdrop-blur-xl bg-rasala-dark/80 pointer-events-auto`}>
               
               {/* Media Container (Kuva TAI Street View) */}
-              <div className="relative group cursor-zoom-in" onClick={() => !activeTarget.streetViewIframe && setLightboxOpen(true)}>
+              <div className={`relative ${!activeTarget.streetViewIframe && lightboxImages.length > 0 ? 'group cursor-zoom-in' : ''}`} onClick={() => !activeTarget.streetViewIframe && lightboxImages.length > 0 && setLightboxOpen(true)}>
                 
                 {activeTarget.streetViewIframe ? (
                   <iframe 
@@ -414,7 +414,7 @@ export const MapView = () => {
 
                 <div className="absolute inset-0 bg-gradient-to-t from-rasala-dark/90 to-transparent opacity-80 pointer-events-none" />
                 
-                {!activeTarget.streetViewIframe && (
+                {!activeTarget.streetViewIframe && lightboxImages.length > 0 && (
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center pointer-events-none">
                     <ZoomIn size={40} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                   </div>

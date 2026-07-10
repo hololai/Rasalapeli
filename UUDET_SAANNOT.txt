@@ -14,37 +14,38 @@ service cloud.firestore {
       return getRole() == 'admin';
     }
 
-    // Oletuksena kielletään kaikki mitä ei erikseen sallita
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // KARTAN SIJAINNIT: Kaikki kirjautuneet näkevät, vain ylläpito voi muokata
     match /map_locations/{document} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (isSuperAdmin() || isAdmin());
     }
 
-    // KUVAT: Kaikki kirjautuneet näkevät, vain ylläpito voi luoda/poistaa
     match /images/{imageId} {
       allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow update: if request.auth != null && (isSuperAdmin() || isAdmin());
       allow create, delete: if request.auth != null && (isSuperAdmin() || isAdmin());
     }
 
-    // KÄYTTÄJÄT: Omien tietojen lukeminen ja ylläpidon oikeudet
+    match /quiz_questions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (isSuperAdmin() || isAdmin());
+    }
+
     match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // ESTETÄÄN ITSE YLENTÄMINEN LUONNIN YHTEYDESSÄ (Paitsi sinä)
+      allow create: if request.auth != null && request.auth.uid == userId && 
+                    (request.resource.data.role == 'pending' || 
+                    (request.auth.token.email != null && request.auth.token.email == 'heikki.laivamaa@gmail.com'));
       allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin() || isAdmin());
       
-      // SUPERADMIN SÄÄNTÖ: saa tehdä mitä vain muiden profiileille
       allow update, delete: if request.auth != null && isSuperAdmin();
-
-      // ADMIN SÄÄNTÖ
+      
       allow update: if request.auth != null && isAdmin() &&
                     (resource.data.role == 'user' || resource.data.role == 'pending') &&
                     (request.resource.data.role == 'user' || request.resource.data.role == 'pending');
-                    
       allow delete: if request.auth != null && isAdmin() &&
                     (resource.data.role == 'user' || resource.data.role == 'pending');
     }
