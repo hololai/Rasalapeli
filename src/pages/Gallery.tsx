@@ -340,7 +340,7 @@ export const Gallery = () => {
                           {/* Tarttumakahva raahaamista varten */}
                           <div 
                             {...provided.dragHandleProps} 
-                            className="absolute top-2 left-2 p-2 bg-black/60 hover:bg-amber-600 text-white rounded-lg cursor-grab active:cursor-grabbing backdrop-blur-md transition-colors"
+                            className="absolute top-2 left-2 p-2 bg-black/60 hover:bg-amber-600 text-white rounded-lg cursor-grab active:cursor-grabbing backdrop-blur-md transition-colors touch-none select-none"
                             title="Raahaa kuvaa muuttaaksesi järjestystä"
                           >
                             <GripHorizontal size={20} />
