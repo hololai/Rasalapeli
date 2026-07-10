@@ -285,7 +285,7 @@ export const MapView = () => {
   if (isRasala && activeTarget) {
     const localRasalaImages = Array.from({length: 12}, (_, i) => ({
       id: `local_rasala_${i+1}`,
-      src: `/assets/jarjestamaton/rasala${i+1}.jpeg`,
+      src: `/assets/KOTITALO/rasala${i+1}.jpeg`,
       title: `${activeTarget.title} (Arkistokuva ${i+1})`,
       description: activeTarget.description || '',
       rotation: 0,
