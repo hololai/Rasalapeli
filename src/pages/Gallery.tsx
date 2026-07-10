@@ -83,6 +83,27 @@ export const Gallery = () => {
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0)
         });
       });
+
+      // Lisätään lokaalit rasala-kuvat, jos niitä ei löydy kannasta
+      const localKotitaloImages = Array.from({length: 12}, (_, i) => ({
+        id: `local_rasala_${i+1}`,
+        path: `/assets/KOTITALO/rasala${i+1}.jpeg`,
+        decade: 'Kotitalo',
+        filename: `rasala${i+1}.jpeg`,
+        caption: '',
+        rotation: 0,
+        hidden: false,
+        orderIndex: i,
+        createdAt: new Date()
+      }));
+
+      // Varmistetaan, ettei lisätä kahteen kertaan
+      localKotitaloImages.forEach(img => {
+        if (!fetched.find(f => f.id === img.id)) {
+          fetched.push(img);
+        }
+      });
+
       setImages(fetched);
     } catch (e) {
       console.error("Virhe kuvien latauksessa paikallisesta tiedostosta:", e);
