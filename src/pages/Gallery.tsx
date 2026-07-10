@@ -49,6 +49,11 @@ export const Gallery = () => {
   const [selectedDecade, setSelectedDecade] = useState<string>('Kaikki');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(24);
+
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [selectedDecade]);
   
   const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
   const [editCaptionText, setEditCaptionText] = useState('');
@@ -207,6 +212,8 @@ export const Gallery = () => {
     rotation: img.rotation || 0,
   }));
 
+  const visibleImages = displayImages.slice(0, visibleCount);
+
   const pendingCount = Object.keys(pendingChanges).length;
 
   return (
@@ -259,12 +266,12 @@ export const Gallery = () => {
         </div>
 
         {/* ── Vuosikymmen-valikko (Pillerit) ── */}
-        <div className="flex flex-wrap gap-3 mb-10 pb-4 border-b border-white/10">
+        <div className="flex overflow-x-auto sm:flex-wrap gap-3 mb-10 pb-4 border-b border-white/10 py-1 px-1 -mx-4 sm:mx-0 sm:px-0 snap-x">
           {decades.map(dec => (
             <button
               key={dec}
               onClick={() => setSelectedDecade(dec)}
-              className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-md border ${
+              className={`whitespace-nowrap snap-center px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-md border ${
                 selectedDecade === dec 
                   ? 'bg-rasala-gold text-black border-rasala-gold scale-105' 
                   : 'bg-black/40 text-white/70 border-white/10 hover:border-white/30 hover:bg-white/10 backdrop-blur-sm'
@@ -311,7 +318,7 @@ export const Gallery = () => {
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                 >
-                  {displayImages.map((img, index) => (
+                  {visibleImages.map((img, index) => (
                     <Draggable key={img.id} draggableId={img.id} index={index}>
                       {(provided, snapshot) => (
                         <div
@@ -380,7 +387,7 @@ export const Gallery = () => {
         ) : (
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             <AnimatePresence>
-              {displayImages.map((img, index) => (
+              {visibleImages.map((img, index) => (
                 <motion.div
                   key={img.id}
                   layout
@@ -433,6 +440,18 @@ export const Gallery = () => {
               ))}
             </AnimatePresence>
           </motion.div>
+        )}
+
+        {/* ── Näytä lisää -painike ── */}
+        {!loading && displayImages.length > visibleCount && (
+          <div className="flex justify-center mt-12 mb-8">
+            <button 
+              onClick={() => setVisibleCount(c => c + 24)} 
+              className="px-8 py-3 bg-amber-600 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.4)] hover:bg-amber-500 active:scale-95 transition-all"
+            >
+              Lataa lisää kuvia ({displayImages.length - visibleCount} jäljellä)
+            </button>
+          </div>
         )}
       </div>
 

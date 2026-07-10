@@ -31,6 +31,16 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
   const prev = () => setCurrent(i => Math.max(0, i - 1));
   const next = () => setCurrent(i => Math.min(images.length - 1, i + 1));
 
+  // Swaippauksen käsittely
+  const handleDragEnd = (e: any, { offset, velocity }: any) => {
+    const swipe = offset.x;
+    if (swipe < -50) {
+      next();
+    } else if (swipe > 50) {
+      prev();
+    }
+  };
+
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -107,7 +117,11 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 0.25 }}
-            className="flex flex-col items-center w-full max-w-5xl"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.7}
+            onDragEnd={handleDragEnd}
+            className="flex flex-col items-center w-full max-w-5xl touch-pan-y"
           >
             {/* Image — fills as much screen as possible */}
             <div className="w-full flex justify-center items-center" style={{ maxHeight: '75vh', overflow: 'hidden' }}>

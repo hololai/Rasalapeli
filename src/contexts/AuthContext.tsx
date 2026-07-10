@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { type User, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { type User, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
@@ -122,9 +122,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  // Käsitellään redirectin tulos (mobiililla palataan tänne)
+  useEffect(() => {
+    getRedirectResult(auth).catch((error) => {
+      console.error("Virhe redirect-kirjautumisen paluussa:", error);
+    });
+  }, []);
+
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Safari ja muut mobiiliselaimet blokkaavat herkästi popupit
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
     } catch (error) {
       console.error("Virhe kirjautumisessa:", error);
     }
