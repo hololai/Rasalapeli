@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { type User, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
+import { type User, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
-export type UserRole = 'superadmin' | 'admin' | 'user' | 'pending';
+export type UserRole = 'superadmin' | 'admin' | 'user' | 'pending' | 'viewer';
 
 export interface UserProfile {
   uid: string;
@@ -19,6 +19,9 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -27,6 +30,9 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signInWithGoogle: async () => {},
+  signInWithEmail: async () => {},
+  signUpWithEmail: async () => {},
+  resetPassword: async () => {},
   logout: async () => {},
 });
 
@@ -41,13 +47,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        let signInProvider = '';
         try {
           // Hae käyttäjän profiili Firestoresta
           const userRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userRef);
-          
+          // Tarkistetaan MITEN käyttäjä kirjautui sisään tässä sessiossa
+          const idTokenResult = await currentUser.getIdTokenResult();
+          signInProvider = idTokenResult.signInProvider || '';
+
           if (userSnap.exists()) {
-            setProfile(userSnap.data() as UserProfile);
+            let dbProfile = userSnap.data() as UserProfile;
+            
+            // Jos kirjautuminen tapahtui salasanalla (mobiili), pakotetaan rooli "vieweriksi"
+            if (signInProvider === 'password') {
+              dbProfile.role = 'viewer';
+            }
+            
+            setProfile(dbProfile);
           } else {
             // Uusi käyttäjä, tallennetaan tietokantaan
             const PREDEFINED_ADMINS = [
@@ -80,6 +97,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             // Ei jäädä odottamaan setDocin valmistumista (jos verkko yskii), tallennetaan taustalla
             setDoc(userRef, newProfile).catch(e => console.error("setDoc taustavirhe:", e));
+            
+            if (signInProvider === 'password') {
+              newProfile.role = 'viewer';
+            }
             setProfile(newProfile);
           }
         } catch (error) {
@@ -105,6 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fallbackRole = 'admin';
           }
           
+          // Jos kirjautuminen tapahtui salasanalla, pakotetaan katselija-rooli fallbackissakin
+          if (signInProvider === 'password') {
+            fallbackRole = 'viewer';
+          }
+
           setProfile({
             uid: currentUser.uid,
             email: currentUser.email || '',
@@ -149,6 +175,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const signUpWithEmail = async (email: string, pass: string) => {
+    await createUserWithEmailAndPassword(auth, email, pass);
+  };
+
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -158,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
