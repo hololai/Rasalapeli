@@ -28,7 +28,7 @@ export function Login() {
       if (mode === 'forgot') {
         if (!email) throw new Error('Syötä sähköpostiosoite ensin.');
         await resetPassword(email);
-        setSuccess('Salasanan palautuslinkki on lähetetty sähköpostiisi!');
+        setSuccess('Palautuslinkki on lähetetty sähköpostiisi!\n\nHUOM 1: Tarkista myös roskapostikansio.\nHUOM 2: Turvallisuussyistä aseta uusi salasana vähintään 15 merkin pituiseksi.');
         setMode('login');
       } else if (mode === 'register') {
         if (!email || !password) throw new Error('Täytä molemmat kentät.');
@@ -86,7 +86,7 @@ export function Login() {
         {success && (
           <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3 text-left">
             <Info className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-emerald-400">{success}</p>
+            <p className="text-sm text-emerald-400 whitespace-pre-line">{success}</p>
           </div>
         )}
 
