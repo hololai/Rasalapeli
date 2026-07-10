@@ -4,6 +4,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Upload, X, Loader2, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import imageCompression from 'browser-image-compression';
 
 export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,9 +48,24 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
       const storagePath = `images/${finalDecade}/${filename}`;
       const docId = filename.replace(/\.[^/.]+$/, "");
 
-      // 1. Upload to Storage
+      // 1. Pakkaa kuva ennen lähetystä
+      const options = {
+        maxSizeMB: 0.4, // Max 400KB tavoite
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+      
+      let compressedFile = file;
+      try {
+        // fileExt saattaa muuttua, mutta pidetään alkuperäinen pääte tallessa
+        compressedFile = await imageCompression(file, options) as File;
+      } catch (err) {
+        console.error("Kuvan pakkaus epäonnistui, käytetään alkuperäistä:", err);
+      }
+
+      // 2. Upload to Storage
       const storageRef = ref(storage, storagePath);
-      await uploadBytes(storageRef, file);
+      await uploadBytes(storageRef, compressedFile);
       const downloadURL = await getDownloadURL(storageRef);
 
       // 2. Save to Firestore
