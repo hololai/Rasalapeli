@@ -59,10 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userSnap.exists()) {
             let dbProfile = userSnap.data() as UserProfile;
             
-            // Jos kirjautuminen tapahtui salasanalla (mobiili), pakotetaan rooli "vieweriksi"
-            if (signInProvider === 'password') {
-              dbProfile.role = 'viewer';
-            }
+
             
             setProfile(dbProfile);
           } else {
@@ -98,9 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Ei jäädä odottamaan setDocin valmistumista (jos verkko yskii), tallennetaan taustalla
             setDoc(userRef, newProfile).catch(e => console.error("setDoc taustavirhe:", e));
             
-            if (signInProvider === 'password') {
-              newProfile.role = 'viewer';
-            }
+
             setProfile(newProfile);
           }
         } catch (error) {
@@ -126,10 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fallbackRole = 'admin';
           }
           
-          // Jos kirjautuminen tapahtui salasanalla, pakotetaan katselija-rooli fallbackissakin
-          if (signInProvider === 'password') {
-            fallbackRole = 'viewer';
-          }
+
 
           setProfile({
             uid: currentUser.uid,
