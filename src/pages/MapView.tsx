@@ -254,7 +254,7 @@ export const MapView = () => {
     return match ? match[1] : '';
   };
 
-  const lightboxImages = activeTarget?.customImageUrl
+  let lightboxImages = activeTarget?.customImageUrl
     ? [{
         id: activeTarget.id,
         src: activeTarget.customImageUrl,
@@ -277,6 +277,22 @@ export const MapView = () => {
         description: activeTargetImageObj.caption || activeTarget.description,
         rotation: activeTargetImageObj.rotation || 0,
       }] : [];
+
+  const isRasala = activeTarget?.title?.toLowerCase().includes('rasala') || 
+                   activeTarget?.id?.toLowerCase().includes('rasala') || 
+                   activeTarget?.description?.toLowerCase().includes('rasala');
+
+  if (isRasala && activeTarget) {
+    const localRasalaImages = Array.from({length: 12}, (_, i) => ({
+      id: `local_rasala_${i+1}`,
+      src: `/assets/jarjestamaton/rasala${i+1}.jpeg`,
+      title: `${activeTarget.title} (Arkistokuva ${i+1})`,
+      description: activeTarget.description || '',
+      rotation: 0,
+    }));
+    // Vältetään turhaa toistoa jos kuvat lisättiin jo muuta kautta, mutta tässä tapauksessa lisätään perään.
+    lightboxImages = [...lightboxImages, ...localRasalaImages];
+  }
 
   const pendingCount = (pendingMapChanges ? 1 : 0) + Object.keys(pendingImageChanges).length;
 
