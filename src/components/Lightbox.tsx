@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 interface LightboxProps {
   images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number }[];
@@ -16,6 +17,7 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
   const [current, setCurrent] = useState(startIndex);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
+  const [isZoomed, setIsZoomed] = useState(false);
   
   const img = images[current];
 
@@ -23,9 +25,10 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
     return null;
   }
 
-  // Nollaa edit-tila kun kuva vaihtuu
+  // Nollaa edit-tila ja zoom kun kuva vaihtuu
   useEffect(() => {
     setIsEditing(false);
+    setIsZoomed(false);
   }, [current]);
 
   const prev = () => setCurrent(i => Math.max(0, i - 1));
@@ -117,24 +120,34 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 0.25 }}
-            drag="x"
+            drag={isZoomed ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.7}
             onDragEnd={handleDragEnd}
-            className="flex flex-col items-center w-full max-w-5xl touch-pan-y"
+            className={`flex flex-col items-center w-full max-w-5xl ${!isZoomed ? 'touch-pan-y' : ''}`}
           >
             {/* Image — fills as much screen as possible */}
             <div className="w-full flex justify-center items-center" style={{ maxHeight: '75vh', overflow: 'hidden' }}>
-              <img
-                src={img.src}
-                alt={img.title}
-                className="object-contain rounded-xl shadow-cinema transition-transform duration-300"
-                style={{ 
-                  maxHeight: '75vh', 
-                  maxWidth: '100%',
-                  transform: `rotate(${img.rotation || 0}deg)` 
-                }}
-              />
+              <TransformWrapper
+                initialScale={1}
+                minScale={1}
+                maxScale={4}
+                centerOnInit
+                onTransform={(ref: any) => setIsZoomed(ref.state.scale > 1.05)}
+              >
+                <TransformComponent wrapperClass="w-full h-full flex justify-center items-center">
+                  <img
+                    src={img.src}
+                    alt={img.title}
+                    className="object-contain rounded-xl shadow-cinema transition-transform duration-300"
+                    style={{ 
+                      maxHeight: '75vh', 
+                      maxWidth: '100vw',
+                      transform: `rotate(${img.rotation || 0}deg)` 
+                    }}
+                  />
+                </TransformComponent>
+              </TransformWrapper>
             </div>
 
             {/* Caption */}
