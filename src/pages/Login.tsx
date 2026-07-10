@@ -7,12 +7,8 @@ export function Login() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLogin = async () => {
-    setIsLoggingIn(true);
+    // Kutsutaan kirjautumista VÄLITTÖMÄSTI, jotta iOS ei estä ponnahdusikkunaa
     await signInWithGoogle();
-    // Kirjautumisen jälkeen AuthContext hoitaa tilan päivittämisen.
-    // Jos popup suljetaan ilman kirjautumista, tila jää päälle, joten 
-    // voisimme periaatteessa resetoida sen, mutta yleensä sivu päivittyy.
-    setTimeout(() => setIsLoggingIn(false), 5000); // Resetoi nappi 5s päästä jos popup suljettiin
   };
 
   return (
