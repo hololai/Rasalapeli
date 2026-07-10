@@ -1,0 +1,1 @@
+{"hosting":{"public":"auth-hosting","ignore":["firebase.json","**/.*","**/node_modules/**"]}}
