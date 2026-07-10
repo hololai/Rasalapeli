@@ -131,7 +131,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      // --- PALAUTUSMERKINTÄ (ROLLBACK ANCHOR) ---
+      // Jos haluat palauttaa takaisin pelkkään Popup-malliin,
+      // poista if (isMobile) -rakenne ja jätä vain: await signInWithPopup(auth, googleProvider);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Puhelimet (kuten iPhone Chrome/Safari) ohjataan Googlen sivulle ja takaisin,
+        // jotta vältytään popup-estoilta. Toimii nyt, kun auth.sukukuvat.fi on käytössä.
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        // Tietokoneet käyttävät aina ponnahdusikkunaa. (TÄMÄ PYSYY EHDOTTOMAN RIKKOUTUMATTOMANA)
+        await signInWithPopup(auth, googleProvider);
+      }
+      // --- PALAUTUSMERKINTÄ LOPPU ---
     } catch (error) {
       console.error("Virhe kirjautumisessa:", error);
     }
