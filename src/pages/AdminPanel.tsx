@@ -24,8 +24,16 @@ export function AdminPanel() {
       setLoadingUsers(true);
       const querySnapshot = await getDocs(collection(db, 'users'));
       const fetchedUsers: UserProfile[] = [];
-      querySnapshot.forEach((doc) => {
-        fetchedUsers.push(doc.data() as UserProfile);
+      querySnapshot.forEach((docSnap) => {
+        const u = docSnap.data() as UserProfile;
+        
+        // Automaattinen korjaus Miljalle
+        if (u.email === 'milja.laivamaa93@gmail.com' && (u.displayName === 'Tuntematon' || !u.displayName)) {
+          u.displayName = 'Milja Saarnio';
+          updateDoc(doc(db, 'users', u.uid), { displayName: 'Milja Saarnio' }).catch(console.error);
+        }
+        
+        fetchedUsers.push(u);
       });
       // Järjestetään niin että superadmin on ensimmäisenä, sitten adminit
       fetchedUsers.sort((a, b) => {
