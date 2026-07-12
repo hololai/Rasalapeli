@@ -3,6 +3,7 @@ import { ArrowLeft, X, ZoomIn, ZoomOut, Unlock, Lock, Copy, Check, MousePointer2
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { InfoButton } from '../components/InfoButton';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,7 +27,10 @@ const createPushPinIcon = (color: string) => L.divIcon({
 });
 
 const defaultIcon = createPushPinIcon('#1c2b1e');
-const homeIcon = createPushPinIcon('#d4af37');
+const homeIcon = createPushPinIcon('#d4af37'); // Kotitontti
+const storyIcon = createPushPinIcon('#d4af37'); // Kultainen
+const photoIcon = createPushPinIcon('#3b82f6'); // Sininen
+const bothIcon = createPushPinIcon('#10b981');  // Vihreä
 
 const eraLabel: Record<string, string> = {
   historical: 'Historiallinen',
@@ -76,6 +80,7 @@ export const MapView = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
 
   const [mode, setMode] = useState<'free' | 'guided'>('free');
+  const [mapFilter, setMapFilter] = useState<'all' | 'stories' | 'photos'>('all');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedPin, setSelectedPin] = useState<any | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -254,6 +259,23 @@ export const MapView = () => {
     return match ? match[1] : '';
   };
 
+  const locationImages = useMemo(() => {
+    if (!activeTarget) return [];
+    let list = images.map(getEffectiveImage).filter(img => img.locationId === activeTarget.id);
+    if (!isAdminMode) list = list.filter(i => !i.hidden);
+    return list.map(img => ({
+      id: img.id,
+      src: img.url,
+      title: activeTarget.title,
+      description: img.caption || activeTarget.description,
+      rotation: img.rotation || 0,
+      uploaderName: img.uploaderName,
+      uploaderEmail: img.uploaderEmail,
+      views: img.views || 0,
+      rawDriveUrl: img.rawDriveUrl
+    }));
+  }, [images, activeTarget, pendingImageChanges, isAdminMode]);
+
   let lightboxImages = activeTarget?.customImageUrl
     ? [{
         id: activeTarget.id,
@@ -283,16 +305,56 @@ export const MapView = () => {
                    activeTarget?.description?.toLowerCase().includes('rasala');
 
   if (isRasala && activeTarget) {
-    const localRasalaImages = Array.from({length: 12}, (_, i) => ({
-      id: `local_rasala_${i+1}`,
-      src: `/assets/KOTITALO/rasala${i+1}.jpeg`,
-      title: `${activeTarget.title} (Arkistokuva ${i+1})`,
-      description: activeTarget.description || '',
-      rotation: 0,
-    }));
-    // Vältetään turhaa toistoa jos kuvat lisättiin jo muuta kautta, mutta tässä tapauksessa lisätään perään.
+    const localRasalaImages = [
+      ...Array.from({length: 16}, (_, i) => ({
+        id: `local_kotitalo_${i+1}`,
+        src: `/assets/KOTITALO/1973_RASALA_${(i+1).toString().padStart(4, '0')}_a.webp`,
+        title: `${activeTarget.title} (Arkistokuva ${i+1})`,
+        description: activeTarget.description || '',
+        rotation: 0,
+      })),
+      ...Array.from({length: 12}, (_, i) => ({
+        id: `local_rasala_${i+1}`,
+        src: `/assets/KOTITALO/rasala${i+1}.jpeg`,
+        title: `${activeTarget.title} (Arkistokuva ${16 + i + 1})`,
+        description: activeTarget.description || '',
+        rotation: 0,
+      }))
+    ];
     lightboxImages = [...lightboxImages, ...localRasalaImages];
   }
+
+  // Lisää sijaintiin linkitetyt erilliset kuvat klusteriin
+  if (locationImages.length > 0) {
+    lightboxImages = [...lightboxImages, ...locationImages];
+  }
+
+  // Kartan suodatus
+  const filteredLocs = useMemo(() => {
+    return effectiveVillageLocs.filter(loc => {
+      const hasStory = !!loc.description && loc.description.length > 5;
+      const hasPhotos = images.some(img => getEffectiveImage(img).locationId === loc.id) || 
+                        loc.id === 'kotitontti' || !!loc.imageId || !!loc.customImageUrl || 
+                        loc.id?.toLowerCase().includes('rasala');
+      
+      if (mapFilter === 'stories') return hasStory;
+      if (mapFilter === 'photos') return hasPhotos;
+      return true;
+    });
+  }, [effectiveVillageLocs, mapFilter, images, pendingImageChanges]);
+
+  const getIcon = (loc: any) => {
+    if (loc.isHome) return homeIcon;
+    const hasStory = !!loc.description && loc.description.length > 5;
+    const hasPhotos = images.some(img => getEffectiveImage(img).locationId === loc.id) || 
+                      loc.id === 'kotitontti' || !!loc.imageId || !!loc.customImageUrl || 
+                      loc.id?.toLowerCase().includes('rasala');
+                      
+    if (hasStory && hasPhotos) return bothIcon;
+    if (hasPhotos) return photoIcon;
+    if (hasStory) return storyIcon;
+    return defaultIcon;
+  };
 
   const pendingCount = (pendingMapChanges ? 1 : 0) + Object.keys(pendingImageChanges).length;
 
@@ -334,6 +396,38 @@ export const MapView = () => {
             Kyläkartta
             {isAdminMode && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full uppercase">Ylläpito</span>}
           </h2>
+          <InfoButton 
+            title="Kyläkartan ohjeet"
+            instructions={[
+              "Kyläkartta sitoo muistot paikkoihin. Voit selailla karttaa vapaasti tai kokeilla Tournee-tilaa, joka kuljettaa sinut tarinasta toiseen automaattisesti.",
+              "Värikoodit:",
+              "🟡 Kultainen nasta: Paikkaan liittyy kirjoitettu tarina tai historia.",
+              "🔵 Sininen nasta: Paikkaan on ladattu valokuvia.",
+              "🟢 Vihreä nasta: Paikasta löytyy sekä tarina että kuvia!",
+              "Voit suodattaa kartan näkymää yläreunan painikkeista (Kaikki / Vain tarinat / Vain kuvat), jos haluat etsiä tietynlaisia muistoja."
+            ]}
+          />
+          
+          <div className="hidden sm:flex bg-black/40 backdrop-blur-md rounded-xl p-1 border border-white/10 ml-4">
+            <button 
+              onClick={() => setMapFilter('all')} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${mapFilter === 'all' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'}`}
+            >
+              Kaikki
+            </button>
+            <button 
+              onClick={() => setMapFilter('stories')} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${mapFilter === 'stories' ? 'bg-rasala-gold/30 text-rasala-gold' : 'text-white/50 hover:text-white'}`}
+            >
+              Vain tarinat
+            </button>
+            <button 
+              onClick={() => setMapFilter('photos')} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${mapFilter === 'photos' ? 'bg-blue-500/30 text-blue-400' : 'text-white/50 hover:text-white'}`}
+            >
+              Vain kuvat
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -385,9 +479,9 @@ export const MapView = () => {
                 }} />
                 <MapFlyTo center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} zoom={15} isGuided={mode === 'guided'} />
                 
-                {effectiveVillageLocs.map(loc => (
+                {filteredLocs.map(loc => (
                   <Marker 
-                    key={loc.id} position={[loc.lat, loc.lng]} icon={loc.isHome ? homeIcon : defaultIcon} draggable={isAdminMode && mode === 'free'}
+                    key={loc.id} position={[loc.lat, loc.lng]} icon={getIcon(loc)} draggable={isAdminMode && mode === 'free'}
                     eventHandlers={{
                       click: () => handlePinClick(loc),
                       dragend: (e) => handleVillageUpdate(loc.id, e.target.getLatLng().lat, e.target.getLatLng().lng)

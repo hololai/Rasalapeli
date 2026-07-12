@@ -4,9 +4,10 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
 import { ImageUploader } from '../components/ImageUploader';
+import { InfoButton } from '../components/InfoButton';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, updateDoc, increment } from 'firebase/firestore';
 
 interface GalleryImage {
   id: string;         // Firestore doc ID (tiedostonimi ilman päätettä)
@@ -18,6 +19,11 @@ interface GalleryImage {
   hidden: boolean;
   orderIndex?: number;
   createdAt?: any;
+  uploaderName?: string;
+  uploaderEmail?: string;
+  tags?: string;
+  views?: number;
+  rawDriveUrl?: string;
 }
 
 const DRIVE_LINKS: Record<string, string> = {
@@ -47,6 +53,9 @@ export const Gallery = () => {
   const [pendingChanges, setPendingChanges] = useState<Record<string, Partial<GalleryImage>>>({});
 
   const [selectedDecade, setSelectedDecade] = useState<string>('Kaikki');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'views'>('default');
+  
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [visibleCount, setVisibleCount] = useState(24);
@@ -84,18 +93,31 @@ export const Gallery = () => {
         });
       });
 
-      // Lisätään lokaalit rasala-kuvat, jos niitä ei löydy kannasta
-      const localKotitaloImages = Array.from({length: 12}, (_, i) => ({
-        id: `local_rasala_${i+1}`,
-        path: `/assets/KOTITALO/rasala${i+1}.jpeg`,
-        decade: 'Kotitalo',
-        filename: `rasala${i+1}.jpeg`,
-        caption: '',
-        rotation: 0,
-        hidden: false,
-        orderIndex: i,
-        createdAt: new Date()
-      }));
+      // Lisätään lokaalit rasala- ja kotitalo-kuvat, jos niitä ei löydy kannasta
+      const localKotitaloImages = [
+        ...Array.from({length: 16}, (_, i) => ({
+          id: `local_kotitalo_${i+1}`,
+          path: `/assets/KOTITALO/1973_RASALA_${(i+1).toString().padStart(4, '0')}_a.webp`,
+          decade: 'Kotitalo',
+          filename: `1973_RASALA_${(i+1).toString().padStart(4, '0')}_a.webp`,
+          caption: '',
+          rotation: 0,
+          hidden: false,
+          orderIndex: i,
+          createdAt: new Date('1973-01-01')
+        })),
+        ...Array.from({length: 12}, (_, i) => ({
+          id: `local_rasala_${i+1}`,
+          path: `/assets/KOTITALO/rasala${i+1}.jpeg`,
+          decade: 'Kotitalo',
+          filename: `rasala${i+1}.jpeg`,
+          caption: '',
+          rotation: 0,
+          hidden: false,
+          orderIndex: 16 + i,
+          createdAt: new Date('2024-01-01')
+        }))
+      ];
 
       // Varmistetaan, ettei lisätä kahteen kertaan
       localKotitaloImages.forEach(img => {
@@ -194,7 +216,6 @@ export const Gallery = () => {
   const displayImages = useMemo(() => {
     let list = images.map(getEffectiveImage);
     
-    // Piilota hidden-kuvat (paitsi jos on admin mode)
     if (!isAdminMode) {
       list = list.filter(img => !img.hidden);
     }
@@ -203,7 +224,23 @@ export const Gallery = () => {
       list = list.filter(img => img.decade === selectedDecade);
     }
     
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(img => 
+        (img.caption && img.caption.toLowerCase().includes(q)) ||
+        (img.filename && img.filename.toLowerCase().includes(q)) ||
+        (img.tags && img.tags.toLowerCase().includes(q)) ||
+        (img.uploaderName && img.uploaderName.toLowerCase().includes(q))
+      );
+    }
+
     return list.sort((a, b) => {
+      if (sortBy === 'views') {
+        const aViews = a.views || 0;
+        const bViews = b.views || 0;
+        if (bViews !== aViews) return bViews - aViews; // Eniten katsotut ensin
+      }
+      
       const decadeDiff = a.decade.localeCompare(b.decade);
       if (decadeDiff !== 0) return decadeDiff;
       if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
@@ -211,7 +248,7 @@ export const Gallery = () => {
       }
       return a.id.localeCompare(b.id);
     });
-  }, [images, pendingChanges, selectedDecade, isAdminMode]);
+  }, [images, pendingChanges, selectedDecade, isAdminMode, searchQuery, sortBy]);
 
   const decades = useMemo(() => {
     const allVisible = images.map(getEffectiveImage).filter(img => isAdminMode || !img.hidden);
@@ -231,6 +268,11 @@ export const Gallery = () => {
     title: img.decade,
     description: img.caption || img.filename,
     rotation: img.rotation || 0,
+    uploaderName: img.uploaderName,
+    uploaderEmail: img.uploaderEmail,
+    views: img.views || 0,
+    // img-objektissa pitää olla rawDriveUrl jos se tallennettiin kannasta!
+    // Lisätään se myös GalleryImage-interfaceen.
   }));
 
   const visibleImages = displayImages.slice(0, visibleCount);
@@ -266,9 +308,20 @@ export const Gallery = () => {
       <div className="max-w-7xl mx-auto w-full">
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="font-serif text-4xl sm:text-5xl font-bold gold-shimmer text-center sm:text-left drop-shadow-md">
-            Valokuvat
-          </h1>
+          <div className="flex items-center gap-4">
+            <h1 className="font-serif text-4xl sm:text-5xl font-bold gold-shimmer text-center sm:text-left drop-shadow-md">
+              Valokuvat
+            </h1>
+            <InfoButton 
+              title="Gallerian ohjeet"
+              instructions={[
+                "Täällä voit selata sukumme ja kotikylämme valokuvia.",
+                "Käytä yläreunan painikkeita suodattaaksesi kuvia vuosikymmenen mukaan, tai hae vapaalla tekstillä (esim. henkilön nimellä).",
+                "Voit muuttaa järjestystä katsotuimpiin valitsemalla lajittelun oikealta.",
+                "Klikkaa mitä tahansa kuvaa nähdäksesi sen suurempana. Suurennetussa näkymässä voit lukea kuvan tarinan, nähdä kuka sen on lisännyt, ja osallistua keskusteluun jättämällä kommentin!"
+              ]}
+            />
+          </div>
           
           <div className="flex items-center gap-3">
             {isAdminUser && (
@@ -301,6 +354,28 @@ export const Gallery = () => {
               {dec === 'Kaikki' ? 'Kaikki kuvat' : dec === 'Kotitalo' ? 'Kotitalo' : `${dec}-luku`}
             </button>
           ))}
+        </div>
+
+        {/* ── Haku ja Lajittelu ── */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-10 items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
+          <input
+            type="text"
+            placeholder="Hae nimellä, tekstillä tai asiasanalla..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:max-w-md bg-black/50 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-rasala-gold transition-colors"
+          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-sm text-white/50 whitespace-nowrap">Lajittele:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'default' | 'views')}
+              className="bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-rasala-gold transition-colors w-full sm:w-auto"
+            >
+              <option value="default">Oletus (uusimmat ensin)</option>
+              <option value="views">Katsotuimmat ensin</option>
+            </select>
+          </div>
         </div>
 
         {/* ── Alkuperäisten kuvien latauslinkki (Google Drive) ── */}
@@ -526,19 +601,22 @@ export const Gallery = () => {
 
       {/* ── Lightbox ── */}
       <AnimatePresence>
-        {lightboxOpen && lightboxData.length > 0 && (
+        {lightboxOpen && (
           <Lightbox
             images={lightboxData}
             startIndex={lightboxIndex}
             onClose={() => setLightboxOpen(false)}
             isAdmin={isAdminMode}
-            onRotate={(id) => handleRotate(id)}
-            onHide={(id) => {
-              handleHide(id);
-              setLightboxOpen(false);
-            }}
-            onSaveCaption={(id, text) => {
-              handleUpdate(id, { caption: text });
+            onRotate={handleRotate}
+            onHide={handleHide}
+            onSaveCaption={(id, text) => handleUpdate(id, { caption: text })}
+            onView={(id) => {
+              // Yritetään päivittää katselukerta taustalla suoraan Firestoreen (jos säännöt sallivat)
+              updateDoc(doc(db, 'images', id), { views: increment(1) }).catch(() => {});
+              
+              // Päivitetään myös paikallinen tila, jotta lajittelu yms. toimii heti, 
+              // mutta EI lisätä pendingChangesiin, jotta käyttäjää ei vaivata "Tallenna" -napilla.
+              setImages(prev => prev.map(img => img.id === id ? { ...img, views: (img.views || 0) + 1 } : img));
             }}
           />
         )}

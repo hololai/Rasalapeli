@@ -9,6 +9,8 @@ export function Login() {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -31,11 +33,11 @@ export function Login() {
         setSuccess('Palautuslinkki on lähetetty sähköpostiisi!\n\nHUOM 1: Tarkista myös roskapostikansio.\nHUOM 2: Turvallisuussyistä aseta uusi salasana vähintään 15 merkin pituiseksi.');
         setMode('login');
       } else if (mode === 'register') {
-        if (!email || !password) throw new Error('Täytä molemmat kentät.');
+        if (!email || !password || !firstName || !lastName) throw new Error('Täytä kaikki kentät (Etunimi, Sukunimi, Sähköposti, Salasana).');
         if (password.length < 15) {
           throw new Error('Turvallisuussyistä salasanan on oltava vähintään 15 merkkiä pitkä.');
         }
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(email, password, firstName, lastName);
       } else {
         if (!email || !password) throw new Error('Täytä molemmat kentät.');
         await signInWithEmail(email, password);
@@ -115,6 +117,27 @@ export function Login() {
         )}
 
         <form onSubmit={handleEmailAction} className="space-y-4">
+          {mode === 'register' && (
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Etunimi"
+                className="w-1/2 bg-stone-900/50 border border-stone-700 text-stone-100 rounded-xl py-3 px-4 focus:outline-none focus:border-amber-500 transition-colors"
+                required
+              />
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Sukunimi"
+                className="w-1/2 bg-stone-900/50 border border-stone-700 text-stone-100 rounded-xl py-3 px-4 focus:outline-none focus:border-amber-500 transition-colors"
+                required
+              />
+            </div>
+          )}
+
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-500" />
             <input

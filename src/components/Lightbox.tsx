@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { Comments } from './Comments';
 
 interface LightboxProps {
-  images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number }[];
+  images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number; uploaderName?: string; uploaderEmail?: string; views?: number; rawDriveUrl?: string }[];
   startIndex?: number;
   onClose: () => void;
   isAdmin?: boolean;
   onRotate?: (id: string) => void;
   onHide?: (id: string) => void;
   onSaveCaption?: (id: string, text: string) => void;
+  onView?: (id: string) => void;
 }
 
-export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption }) => {
+export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption, onView }) => {
   const [current, setCurrent] = useState(startIndex);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
@@ -29,6 +31,11 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
   useEffect(() => {
     setIsEditing(false);
     setIsZoomed(false);
+    
+    // Päivitä katselukerrat kun kuva vaihtuu
+    if (images[current] && onView) {
+      onView(images[current].id);
+    }
   }, [current]);
 
   const prev = () => setCurrent(i => Math.max(0, i - 1));
@@ -188,6 +195,32 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
                   <p className="text-white/80 mt-2 text-base leading-relaxed">{img.description}</p>
                 )
               )}
+
+              {/* Metatiedot: Lataaja, Katselukerrat ja Alkuperäiskuva */}
+              <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-white/50 border-t border-white/10 pt-4">
+                {img.uploaderName && (
+                  <span>Lisännyt: <strong className="text-white/70">{img.uploaderName}</strong></span>
+                )}
+                {img.views !== undefined && (
+                  <span>Katsottu: <strong className="text-white/70">{img.views} krt</strong></span>
+                )}
+                
+                {img.rawDriveUrl ? (
+                  <a href={img.rawDriveUrl} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 font-medium underline">
+                    Avaa alkuperäinen kuva (Drive)
+                  </a>
+                ) : img.uploaderEmail ? (
+                  <a 
+                    href={`mailto:${img.uploaderEmail}?subject=Rasalapeli:%20Pyyntö%20alkuperäiselle%20kuvalle&body=Hei%20${img.uploaderName},%0A%0Apyytäisin%20alkuperäistä%20(korkearesoluutioista)%20versiota%20kuvasta:%20${img.id}.%0A%0AKiitos!`} 
+                    className="text-amber-500 hover:text-amber-400 font-medium underline"
+                  >
+                    Kysy alkuperäistä kuvaa (Sähköposti)
+                  </a>
+                ) : null}
+              </div>
+
+              {/* Kommentit */}
+              <Comments imageId={img.id} isAdmin={isAdmin || false} />
             </div>
           </motion.div>
         </AnimatePresence>

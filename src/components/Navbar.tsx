@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Clock, Map, BookOpen, LogOut, LogIn, User, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { InfoButton } from './InfoButton';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,7 +28,19 @@ export const Navbar = () => {
     <>
       {/* Desktop – yläpalkki */}
       <nav className="navbar-glass-top hidden sm:flex fixed top-0 left-0 right-0 z-50 px-8 py-3 items-center justify-between">
-        <span className="font-serif text-xl font-bold text-rasala-gold tracking-wide">Ellan ja Viken suku</span>
+        <div className="flex items-center gap-3">
+          <span className="font-serif text-xl font-bold text-rasala-gold tracking-wide">Ellan ja Viken suku</span>
+          <InfoButton 
+            title="Tervetuloa!"
+            iconSize={18}
+            buttonClassName="p-1.5"
+            instructions={[
+              "Tervetuloa Rasalapeliin – yhteiseen muistojen arkistoomme.",
+              "Tämä sovellus on tarkoitettu tarinoiden, valokuvien ja historian jakamiseen turvallisesti perheen ja suvun kesken.",
+              "Jos sinulla on vanhoja valokuvia tai muistat mielenkiintoisen tarinan jostakin paikasta, ota yhteyttä ylläpitäjään, jotta voimme tallentaa sen tänne!"
+            ]}
+          />
+        </div>
         <div className="flex gap-1">
           {navItems.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
@@ -79,7 +92,21 @@ export const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile – alapalkki */}
+      {/* Mobile – alapalkki (yläpalkkiin laitetaan mobiilissa logo ja info) */}
+      <div className="sm:hidden fixed top-0 left-0 right-0 z-50 px-4 py-3 bg-black/60 backdrop-blur-md border-b border-white/5 flex items-center justify-between">
+        <span className="font-serif text-lg font-bold text-rasala-gold tracking-wide">Ellan ja Viken suku</span>
+        <InfoButton 
+          title="Tervetuloa!"
+          iconSize={18}
+          buttonClassName="p-1.5 bg-black/50"
+          instructions={[
+            "Tervetuloa Rasalapeliin – yhteiseen muistojen arkistoomme.",
+            "Tämä sovellus on tarkoitettu tarinoiden, valokuvien ja historian jakamiseen turvallisesti perheen ja suvun kesken.",
+            "Jos sinulla on vanhoja valokuvia tai muistat mielenkiintoisen tarinan jostakin paikasta, ota yhteyttä ylläpitäjään, jotta voimme tallentaa sen tänne!"
+          ]}
+        />
+      </div>
+
       <nav className="navbar-glass sm:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2 px-2">
         {navItems.map(({ path, label, icon: Icon }) => {
           const active = location.pathname === path;
