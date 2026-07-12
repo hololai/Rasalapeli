@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Login } from '../pages/Login';
+import { ForceNameUpdate } from './ForceNameUpdate';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -25,6 +26,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Tämä estää täysin lasten komponenttien (koko sovelluksen) renderöinnin ja lataamisen.
   if (!user || !profile) {
     return <Login />;
+  }
+
+  // Jos nimeä ei ole asetettu (esim. vanha sähköpostikäyttäjä)
+  if (profile.displayName === 'Tuntematon' || !profile.displayName) {
+    return <ForceNameUpdate />;
   }
 
   // Jos käyttäjä on odotustilassa, näytetään odotusruutu

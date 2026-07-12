@@ -20,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, firstName: string, lastName: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -171,8 +171,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const signUpWithEmail = async (email: string, pass: string) => {
-    await createUserWithEmailAndPassword(auth, email, pass);
+  const signUpWithEmail = async (email: string, pass: string, firstName: string, lastName: string) => {
+    const { user } = await createUserWithEmailAndPassword(auth, email, pass);
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    
+    // Yritetään päivittää Auth-profiilin nimi, mutta ei kaaduta jos epäonnistuu
+    try {
+      const { updateProfile } = await import('firebase/auth');
+      await updateProfile(user, { displayName: fullName });
+    } catch (e) {
+      console.error("Nimen päivitys auth-profiiliin epäonnistui", e);
+    }
+
+    // Tallennetaan suoraan Firestoreen (jotta ei jää "Tuntematon" jos auth.onAuthStateChanged ehtii ensin)
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const newProfile: UserProfile = {
+        uid: user.uid,
+        email: user.email || '',
+        displayName: fullName,
+        photoURL: user.photoURL || '',
+        role: 'pending',
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(userRef, newProfile);
+    } catch (e) {
+      console.error("Nimen päivitys Firestoreen epäonnistui", e);
+    }
   };
 
   const resetPassword = async (email: string) => {
