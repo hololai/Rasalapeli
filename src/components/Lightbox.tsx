@@ -171,10 +171,10 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
                     value={editText}
                     onChange={e => setEditText(e.target.value)}
                     placeholder="Kirjoita kuvateksti tai tarina tähän..."
-                    className="w-full h-32 bg-black/60 border border-white/20 rounded-xl p-4 text-white focus:border-rasala-gold outline-none resize-none"
+                    className="w-full min-h-[80px] max-h-32 bg-black/60 border border-white/20 rounded-xl p-4 text-white focus:border-rasala-gold outline-none resize-none"
                   />
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 shrink-0">
+                    <button onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors w-full sm:w-auto">
                       Peruuta
                     </button>
                     <button 
@@ -184,7 +184,7 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
                           setIsEditing(false);
                         }
                       }} 
-                      className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold flex items-center gap-2"
+                      className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold flex items-center justify-center gap-2 w-full sm:w-auto"
                     >
                       <Save size={18} /> Tallenna
                     </button>

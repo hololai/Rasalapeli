@@ -241,11 +241,15 @@ export const Gallery = () => {
         if (bViews !== aViews) return bViews - aViews; // Eniten katsotut ensin
       }
       
+      const aOrder = a.orderIndex !== undefined ? a.orderIndex : 0;
+      const bOrder = b.orderIndex !== undefined ? b.orderIndex : 0;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder; // Pienin (negatiivisin = uusin lataus) ensin
+      }
+
       const decadeDiff = a.decade.localeCompare(b.decade);
       if (decadeDiff !== 0) return decadeDiff;
-      if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
-        return a.orderIndex - b.orderIndex;
-      }
+      
       return a.id.localeCompare(b.id);
     });
   }, [images, pendingChanges, selectedDecade, isAdminMode, searchQuery, sortBy]);
@@ -289,10 +293,10 @@ export const Gallery = () => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
+            className="fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center gap-4 w-[90vw] sm:w-auto text-center bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
           >
-            <span className="font-bold whitespace-nowrap">
-              {pendingCount} muutosta odottaa
+            <span className="font-bold">
+              {pendingCount} {pendingCount === 1 ? 'muutos odottaa' : 'muutosta odottaa'} tallennusta
             </span>
             <button 
               onClick={saveAllChangesToDB}
@@ -372,7 +376,7 @@ export const Gallery = () => {
               onChange={(e) => setSortBy(e.target.value as 'default' | 'views')}
               className="bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-rasala-gold transition-colors w-full sm:w-auto"
             >
-              <option value="default">Oletus (uusimmat ensin)</option>
+              <option value="default">Viimeksi ladatut</option>
               <option value="views">Katsotuimmat ensin</option>
             </select>
           </div>

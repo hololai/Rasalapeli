@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState } from 'react';
 import { Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,8 +22,7 @@ export const InfoButton: React.FC<InfoButtonProps> = ({ title, instructions, but
         <Info size={iconSize} />
       </button>
 
-      {createPortal(
-        <AnimatePresence>
+      <AnimatePresence>
         {isOpen && (
           <motion.div 
             initial={{ opacity: 0 }} 
@@ -76,9 +74,7 @@ export const InfoButton: React.FC<InfoButtonProps> = ({ title, instructions, but
             </motion.div>
           </motion.div>
         )}
-        </AnimatePresence>,
-        document.body
-      )}
+      </AnimatePresence>
     </>
   );
 };

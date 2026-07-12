@@ -374,9 +374,9 @@ export const MapView = () => {
         {pendingCount > 0 && (
           <motion.div 
             initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center gap-4 w-[90vw] sm:w-auto text-center bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
           >
-            <span className="font-bold whitespace-nowrap">
+            <span className="font-bold">
               Kartassa muutoksia odottaa tallennusta!
             </span>
             <button 
