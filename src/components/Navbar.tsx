@@ -48,6 +48,12 @@ export const Navbar = () => {
               <Link
                 key={path}
                 to={path}
+                onClick={(e) => {
+                  if (active) {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                   active
@@ -114,6 +120,12 @@ export const Navbar = () => {
             <Link
               key={path}
               to={path}
+              onClick={(e) => {
+                if (active) {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
               className={cn(
                 'flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-all duration-200',
                 active

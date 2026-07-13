@@ -475,7 +475,7 @@ export const Gallery = () => {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-20 right-4 sm:bottom-10 sm:right-10 z-[100]"
+              className="fixed bottom-[90px] sm:bottom-10 left-1/2 -translate-x-1/2 sm:left-auto sm:right-10 z-[100]"
             >
               <button 
                 onClick={scrollToTop}
