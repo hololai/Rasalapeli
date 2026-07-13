@@ -107,14 +107,14 @@ export const Comments: React.FC<CommentsProps> = ({ imageId, isAdmin }) => {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2 w-full">
         <input
           type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={profile?.displayName ? "Lisää kommentti..." : "Kirjaudu sisään kommentoidaksesi"}
           disabled={!profile?.displayName || isSubmitting}
-          className="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rasala-gold transition-colors disabled:opacity-50"
+          className="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:outline-none focus:border-rasala-gold transition-colors disabled:opacity-50"
         />
         <button
           type="submit"
