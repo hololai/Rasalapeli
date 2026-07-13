@@ -19,6 +19,7 @@ interface LightboxProps {
 export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption, onView }) => {
   const { profile, toggleFavorite } = useAuth();
   const [current, setCurrent] = useState(startIndex);
+  const [direction, setDirection] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [isZoomed, setIsZoomed] = useState(false);
@@ -41,8 +42,18 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
     }
   }, [current]);
 
-  const prev = () => setCurrent(i => Math.max(0, i - 1));
-  const next = () => setCurrent(i => Math.min(images.length - 1, i + 1));
+  const prev = () => {
+    if (current > 0) {
+      setDirection(-1);
+      setCurrent(current - 1);
+    }
+  };
+  const next = () => {
+    if (current < images.length - 1) {
+      setDirection(1);
+      setCurrent(current + 1);
+    }
+  };
 
   // Swaippauksen käsittely
   const handleDragEnd = (e: any, { offset, velocity }: any) => {
@@ -117,16 +128,17 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
 
       {/* Main content - Edge to Edge */}
       <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={current}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            custom={direction}
+            initial={{ opacity: 0, x: direction > 0 ? 200 : direction < 0 ? -200 : 0 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction > 0 ? -200 : direction < 0 ? 200 : 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, opacity: { duration: 0.2 } }}
             drag={isZoomed ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.7}
+            dragElastic={0.2}
             onDragEnd={handleDragEnd}
             className="absolute inset-0 touch-pan-y"
           >

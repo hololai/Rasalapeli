@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart, MapPin } from 'lucide-react';
+import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart, MapPin, ArrowUp } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
@@ -57,7 +57,8 @@ export const Gallery = () => {
   const [selectedDecade, setSelectedDecade] = useState<string>('Kaikki');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'views' | 'favorites'>('default');
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
+  
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -66,6 +67,18 @@ export const Gallery = () => {
   useEffect(() => {
     setVisibleCount(24);
   }, [selectedDecade]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
   const [editCaptionText, setEditCaptionText] = useState('');
@@ -179,6 +192,22 @@ export const Gallery = () => {
       locationText: editLocationText || undefined
     });
     setEditingImage(null);
+  };
+
+  const autoLinkLocations = () => {
+    if (!window.confirm("Yhdistetäänkö kaikki kuvat vapaiden paikkakuntatekstien perusteella olemassa oleviin nastoihin?")) return;
+    
+    let linkedCount = 0;
+    images.forEach(img => {
+      if (img.locationText && !img.locationId) {
+        const match = locations.find(loc => loc.title.toLowerCase() === img.locationText!.toLowerCase().trim());
+        if (match) {
+          handleUpdate(img.id, { locationId: match.id });
+          linkedCount++;
+        }
+      }
+    });
+    alert(`Löydettiin ${linkedCount} yhdistettävää kuvaa. Muista painaa "Tallenna tietokantaan" kun olet valmis!`);
   };
 
   const handleRotate = (id: string) => {
@@ -361,6 +390,11 @@ export const Gallery = () => {
           <div className="flex items-center gap-3">
             {isAdminUser && (
               <>
+                {isAdminMode && locations.length > 0 && (
+                   <button onClick={autoLinkLocations} className="flex items-center gap-2 px-4 py-2 bg-blue-600/50 hover:bg-blue-500 rounded-xl transition-all shadow-lg text-sm font-bold border border-blue-400">
+                     <MapPin size={18} /> Yhdistä Sijainnit
+                   </button>
+                )}
                 <ImageUploader onUploadComplete={fetchImages} />
                 <button 
                   onClick={() => setIsAdminMode(!isAdminMode)} 
@@ -374,8 +408,8 @@ export const Gallery = () => {
           </div>
         </div>
 
-        {/* ── Ylätyökalut (Mobiilissa piilotettu oletuksena) ── */}
-        <div className={`transition-all duration-500 overflow-hidden ${showFiltersMobile ? 'max-h-[1000px] opacity-100 mb-10' : 'max-h-0 opacity-0 sm:max-h-[1000px] sm:opacity-100 sm:mb-10'}`}>
+        {/* ── Ylätyökalut ── */}
+        <div className="mb-10">
           {/* ── Vuosikymmen-valikko (Pillerit) ── */}
           <div className="flex overflow-x-auto sm:flex-wrap gap-3 mb-6 pb-4 border-b border-white/10 py-1 px-1 -mx-4 sm:mx-0 sm:px-0 snap-x">
           {decades.map(dec => (
@@ -434,14 +468,25 @@ export const Gallery = () => {
         )}
         </div>
 
-        {/* ── Mobiilin Suodata & Hae Kelluva Nappi ── */}
-        <button
-          onClick={() => setShowFiltersMobile(!showFiltersMobile)}
-          className="sm:hidden fixed bottom-20 right-4 z-40 bg-rasala-gold text-black p-4 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.5)] flex items-center justify-center transition-transform active:scale-95"
-          title="Suodata ja hae kuvia"
-        >
-          <Filter size={24} />
-        </button>
+        {/* ── Palaa ylös -kelluva nappi ── */}
+        <AnimatePresence>
+          {showScrollTop && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-20 right-4 sm:bottom-10 sm:right-10 z-[100]"
+            >
+              <button 
+                onClick={scrollToTop}
+                className="bg-rasala-gold text-amber-950 p-3 sm:p-4 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-yellow-200"
+                title="Palaa ylös"
+              >
+                <ArrowUp size={24} className="sm:w-8 sm:h-8" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── Kuvagalleria ── */}
         {loading ? (
