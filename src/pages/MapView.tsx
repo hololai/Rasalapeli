@@ -99,7 +99,7 @@ export const MapView = () => {
 
   const [pinEditorOpen, setPinEditorOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '', customImageUrl: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', era: 'growth', pinType: 'auto', imageId: '', streetViewIframe: '', customImageUrl: '' });
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
