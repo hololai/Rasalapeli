@@ -128,7 +128,7 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.7}
             onDragEnd={handleDragEnd}
-            className="absolute inset-0 flex items-center justify-center touch-pan-y"
+            className="absolute inset-0 touch-pan-y"
           >
             <TransformWrapper
               initialScale={1}
@@ -137,11 +137,14 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
               centerOnInit
               onTransform={(ref: any) => setIsZoomed(ref.state.scale > 1.05)}
             >
-              <TransformComponent wrapperClass="w-full h-full flex justify-center items-center">
+              <TransformComponent 
+                wrapperStyle={{ width: '100vw', height: '100vh' }}
+                contentStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+              >
                 <img
                   src={img.src}
                   alt={img.title}
-                  className="object-contain w-full h-full"
+                  className="object-contain"
                   style={{ 
                     maxHeight: '100vh', 
                     maxWidth: '100vw',
