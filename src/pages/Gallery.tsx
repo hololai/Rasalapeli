@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart } from 'lucide-react';
+import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart, MapPin } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
@@ -7,7 +7,7 @@ import { ImageUploader } from '../components/ImageUploader';
 import { InfoButton } from '../components/InfoButton';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
-import { collection, getDocs, writeBatch, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 
 interface GalleryImage {
   id: string;         // Firestore doc ID (tiedostonimi ilman päätettä)
@@ -24,6 +24,8 @@ interface GalleryImage {
   tags?: string;
   views?: number;
   rawDriveUrl?: string;
+  locationId?: string;
+  locationText?: string;
 }
 
 const DRIVE_LINKS: Record<string, string> = {
@@ -67,6 +69,9 @@ export const Gallery = () => {
   
   const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
   const [editCaptionText, setEditCaptionText] = useState('');
+  const [editLocationId, setEditLocationId] = useState('');
+  const [editLocationText, setEditLocationText] = useState('');
+  const [locations, setLocations] = useState<{id: string, title: string}[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Hae kuvat Firestoresta
@@ -90,9 +95,19 @@ export const Gallery = () => {
           rotation: data.rotation || 0,
           hidden: data.hidden || false,
           orderIndex: data.orderIndex || 0,
+          locationId: data.locationId,
+          locationText: data.locationText,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0)
         });
       });
+
+      // Fetch Locations for edit modal and metadata
+      try {
+        const villDoc = await getDoc(doc(db, 'map_locations', 'village'));
+        if (villDoc.exists()) setLocations(villDoc.data().locations || []);
+      } catch (e) {
+        console.error("Lokaatioiden haku epäonnistui", e);
+      }
 
       // Lisätään lokaalit rasala- ja kotitalo-kuvat, jos niitä ei löydy kannasta
       const localKotitaloImages = [
@@ -149,9 +164,20 @@ export const Gallery = () => {
     });
   };
 
-  const handleSaveCaption = () => {
+  const handleSaveEdit = () => {
     if (!editingImage) return;
-    handleUpdate(editingImage.id, { caption: editCaptionText });
+
+    let finalLocationId = editLocationId;
+    if (!finalLocationId && editLocationText) {
+      const match = locations.find(loc => loc.title.toLowerCase() === editLocationText.toLowerCase().trim());
+      if (match) finalLocationId = match.id;
+    }
+
+    handleUpdate(editingImage.id, { 
+      caption: editCaptionText,
+      locationId: finalLocationId || undefined,
+      locationText: editLocationText || undefined
+    });
     setEditingImage(null);
   };
 
@@ -371,10 +397,10 @@ export const Gallery = () => {
           <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
           <input
             type="text"
-            placeholder="Hae nimellä, tekstillä tai asiasanalla..."
+            placeholder="Hae kuvista, esim. 'Juhannus 1974' tai 'Anna'"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:max-w-md bg-black/50 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-rasala-gold transition-colors"
+            className="w-full bg-black/40 border border-white/20 rounded-xl pl-10 pr-10 py-2.5 text-base text-white focus:outline-none focus:border-rasala-gold transition-colors"
           />
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <span className="text-sm text-white/50 whitespace-nowrap">Lajittele:</span>
@@ -480,7 +506,7 @@ export const Gallery = () => {
                             <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
                               <RotateCw size={16} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); setEditLocationId(img.locationId || ''); setEditLocationText(img.locationText || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
                               <Edit3 size={16} />
                             </button>
                             {img.hidden ? (
@@ -549,6 +575,11 @@ export const Gallery = () => {
                     <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-rasala-gold border border-rasala-gold/20">
                       {img.decade}
                     </div>
+                    {(img.locationText || img.locationId) && (
+                      <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-rasala-gold border border-rasala-gold/20 flex items-center gap-1">
+                        <MapPin size={12} /> {img.locationText || locations.find(l => l.id === img.locationId)?.title || "Kartalla"}
+                      </div>
+                    )}
                     {img.hidden && (
                       <div className="bg-red-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-red-200 border border-red-500/50 flex items-center gap-1">
                         <Trash2 size={12} /> Piilotettu
@@ -607,7 +638,7 @@ export const Gallery = () => {
                 <X size={20} />
               </button>
               
-              <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-4">Muokkaa Kuvatekstiä</h3>
+              <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-4">Muokkaa Tietoja</h3>
               <p className="text-sm text-white/50 mb-4 font-mono">{editingImage.filename}</p>
               
               <img src={editingImage.path} alt="" className="w-full h-48 object-cover rounded-xl mb-4 border border-white/10" />
@@ -620,12 +651,38 @@ export const Gallery = () => {
                 className="w-full h-32 bg-black/50 border border-white/20 rounded-xl p-4 text-white placeholder:text-white/30 focus:border-rasala-gold focus:ring-1 focus:ring-rasala-gold outline-none resize-none transition-all"
               />
 
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Sijainti kartalla</label>
+                  <select 
+                    value={editLocationId} 
+                    onChange={(e) => setEditLocationId(e.target.value)}
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                  >
+                    <option value="">-- Ei nastaa --</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vapaa paikkakunta</label>
+                  <input 
+                    type="text"
+                    value={editLocationText}
+                    onChange={(e) => setEditLocationText(e.target.value)}
+                    placeholder="Esim. Ranua"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                  />
+                </div>
+              </div>
+
               <div className="mt-6 flex justify-end gap-3">
                 <button onClick={() => setEditingImage(null)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors">
                   Peruuta
                 </button>
-                <button onClick={handleSaveCaption} className="btn-gold px-6 py-2 rounded-xl font-bold flex items-center gap-2">
-                  <CheckCircle size={18} /> Valmis
+                <button onClick={handleSaveEdit} className="btn-gold px-6 py-2 rounded-xl font-bold flex items-center gap-2">
+                  <CheckCircle size={18} /> Tallenna
                 </button>
               </div>
             </motion.div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../firebase/config';
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Upload, X, Loader2, ImagePlus, MapPin, Link as LinkIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +18,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
   const [decade, setDecade] = useState('1970');
   const [caption, setCaption] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [locationText, setLocationText] = useState('');
   const [rawDriveUrl, setRawDriveUrl] = useState('');
   
   const [locations, setLocations] = useState<{id: string, title: string}[]>([]);
@@ -29,10 +30,10 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
       // Hae karttalokaatiot pudotusvalikkoa varten
       const fetchLocs = async () => {
         try {
-          const snap = await getDocs(collection(db, 'locations'));
-          const locs: any[] = [];
-          snap.forEach(d => locs.push({ id: d.id, title: d.data().title }));
-          setLocations(locs);
+          const villDoc = await getDoc(doc(db, 'map_locations', 'village'));
+          if (villDoc.exists()) {
+            setLocations(villDoc.data().locations || []);
+          }
         } catch (e) {
           console.error("Lokaatioiden haku epäonnistui", e);
         }
@@ -80,6 +81,15 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
         useWebWorker: true,
       };
 
+      // Automaattinen nastan yhdistäminen vapaan tekstin perusteella
+      let finalLocationId = locationId;
+      if (!finalLocationId && locationText) {
+        const match = locations.find(loc => loc.title.toLowerCase() === locationText.toLowerCase().trim());
+        if (match) {
+          finalLocationId = match.id;
+        }
+      }
+
       for (const file of files) {
         const fileExt = file.name.split('.').pop();
         const filename = `${finalDecade}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
@@ -104,7 +114,8 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
           decade: finalDecade,
           year: year,
           caption: caption,
-          locationId: locationId || null,
+          locationId: finalLocationId || null,
+          locationText: locationText || null,
           rawDriveUrl: rawDriveUrl || null,
           uploaderName: profile?.displayName || 'Tuntematon',
           uploaderEmail: profile?.email || '',
@@ -121,6 +132,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
       setYear('');
       setCaption('');
       setRawDriveUrl('');
+      setLocationText('');
       
       if (onUploadComplete) onUploadComplete();
       alert(`Lataus onnistui! (${files.length} kuvaa)`);
@@ -146,7 +158,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
         {isOpen && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           >
             <motion.div 
               initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: 0.9 }}
@@ -233,7 +245,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
                         value={year} 
                         onChange={(e) => setYear(e.target.value)}
                         placeholder="esim. 1974"
-                        className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:border-rasala-gold outline-none"
+                        className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-base text-white focus:border-rasala-gold outline-none"
                       />
                     </div>
                     <div>
@@ -242,7 +254,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
                         value={decade} 
                         onChange={(e) => setDecade(e.target.value)}
                         disabled={year.length === 4}
-                        className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:border-rasala-gold outline-none disabled:opacity-50"
+                        className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-base text-white focus:border-rasala-gold outline-none disabled:opacity-50"
                       >
                         <option value="Kotitalo">Kotitalo</option>
                         <option value="1920">1920-luku</option>
@@ -267,13 +279,26 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
                     <select 
                       value={locationId} 
                       onChange={(e) => setLocationId(e.target.value)}
-                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:border-rasala-gold outline-none"
+                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-base text-white focus:border-rasala-gold outline-none"
                     >
-                      <option value="">-- Ei sijaintia --</option>
+                      <option value="">-- Ei nastaa --</option>
                       {locations.map(loc => (
                         <option key={loc.id} value={loc.id}>{loc.title}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-white/50 mb-1 flex items-center gap-1">
+                      <MapPin size={12}/> Tarkempi paikka (Vapaa teksti)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={locationText} 
+                      onChange={(e) => setLocationText(e.target.value)}
+                      placeholder="esim. Ranua tai Mummolan piha"
+                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-base text-white focus:border-rasala-gold outline-none"
+                    />
                   </div>
 
                   <div>
@@ -285,7 +310,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
                       value={rawDriveUrl} 
                       onChange={(e) => setRawDriveUrl(e.target.value)}
                       placeholder="https://drive.google.com/..."
-                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:border-rasala-gold outline-none"
+                      className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-base text-white focus:border-rasala-gold outline-none"
                     />
                   </div>
 
@@ -295,7 +320,7 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
                       value={caption} 
                       onChange={(e) => setCaption(e.target.value)}
                       placeholder="Mitä tässä tapahtuu?"
-                      className="w-full h-20 bg-black/50 border border-white/20 rounded-lg p-3 text-sm text-white placeholder:text-white/30 focus:border-rasala-gold outline-none resize-none"
+                      className="w-full h-20 bg-black/50 border border-white/20 rounded-lg p-3 text-base text-white placeholder:text-white/30 focus:border-rasala-gold outline-none resize-none"
                     />
                   </div>
                 </div>
