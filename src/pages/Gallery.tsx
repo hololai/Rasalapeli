@@ -249,7 +249,26 @@ export const Gallery = () => {
       
       Object.keys(pendingChanges).forEach(id => {
         const ref = doc(db, 'images', id);
-        batch.update(ref, pendingChanges[id]);
+        const originalImg = images.find(i => i.id === id);
+        
+        // Kopioidaan päivitykset ja siivotaan undefined-arvot pois
+        const updates: any = { ...pendingChanges[id] };
+        Object.keys(updates).forEach(key => {
+          if (updates[key] === undefined) {
+            updates[key] = null;
+          }
+        });
+
+        // Varmistetaan, että ainakin perustiedot menevät perille jos dokumenttia ei vielä ollut olemassa
+        const finalData = originalImg ? {
+          decade: originalImg.decade,
+          filename: originalImg.filename,
+          url: originalImg.path, // Huom: Firestore tallentaa pathin url-kenttään
+          ...updates
+        } : updates;
+
+        // Käytetään set({merge: true}) update:n sijaan. Tämä luo dokumentin jos se puuttuu!
+        batch.set(ref, finalData, { merge: true });
       });
 
       await batch.commit();
