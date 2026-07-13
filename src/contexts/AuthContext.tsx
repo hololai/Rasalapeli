@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { type User, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
 export type UserRole = 'superadmin' | 'admin' | 'user' | 'pending' | 'viewer';
@@ -11,6 +11,7 @@ export interface UserProfile {
   displayName: string;
   photoURL: string;
   role: UserRole;
+  favorites?: string[];
   createdAt?: any;
 }
 
@@ -22,6 +23,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, firstName: string, lastName: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  toggleFavorite: (imageId: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -33,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithEmail: async () => {},
   signUpWithEmail: async () => {},
   resetPassword: async () => {},
+  toggleFavorite: async () => {},
   logout: async () => {},
 });
 
@@ -212,9 +215,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const toggleFavorite = async (imageId: string) => {
+    if (!user || !profile) return;
+    const isFavorite = profile.favorites?.includes(imageId);
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      if (isFavorite) {
+        await updateDoc(userRef, { favorites: arrayRemove(imageId) });
+        setProfile(prev => prev ? { ...prev, favorites: prev.favorites?.filter(id => id !== imageId) || [] } : prev);
+      } else {
+        await updateDoc(userRef, { favorites: arrayUnion(imageId) });
+        setProfile(prev => prev ? { ...prev, favorites: [...(prev.favorites || []), imageId] } : prev);
+      }
+    } catch (e) {
+      console.error("Virhe suosikkien päivityksessä:", e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, logout }}>
-      {children}
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, toggleFavorite, logout }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

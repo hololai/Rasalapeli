@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2, Heart, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Comments } from './Comments';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LightboxProps {
   images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number; uploaderName?: string; uploaderEmail?: string; views?: number; rawDriveUrl?: string }[];
@@ -16,10 +17,12 @@ interface LightboxProps {
 }
 
 export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption, onView }) => {
+  const { profile, toggleFavorite } = useAuth();
   const [current, setCurrent] = useState(startIndex);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   
   const img = images[current];
 
@@ -68,182 +71,171 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="lightbox-overlay"
+      className="fixed inset-0 z-[100] bg-black flex flex-col"
       onClick={onClose}
     >
       {/* Oikean yläkulman napit */}
-      <div className="absolute top-4 right-4 z-20 flex gap-3">
+      <div className="absolute top-4 right-4 z-[110] flex gap-3">
         {isAdmin && onSaveCaption && !isEditing && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setEditText(img.description || ''); setIsEditing(true); }}
-            className="p-3 rounded-full bg-red-600/50 hover:bg-red-500 text-white transition-colors backdrop-blur-md"
-            title="Muokkaa kuvatekstiä"
-          >
+          <button onClick={(e) => { e.stopPropagation(); setEditText(img.description || ''); setIsEditing(true); }} className="p-3 rounded-full bg-red-600/50 hover:bg-red-500 text-white transition-colors backdrop-blur-md" title="Muokkaa kuvatekstiä">
             <Edit3 size={24} />
           </button>
         )}
         {isAdmin && onRotate && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onRotate(img.id); }}
-            className="p-3 rounded-full bg-blue-600/50 hover:bg-blue-500 text-white transition-colors backdrop-blur-md"
-            title="Käännä kuvaa"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onRotate(img.id); }} className="p-3 rounded-full bg-blue-600/50 hover:bg-blue-500 text-white transition-colors backdrop-blur-md" title="Käännä kuvaa">
             <RotateCw size={24} />
           </button>
         )}
         {isAdmin && onHide && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onHide(img.id); }}
-            className="p-3 rounded-full bg-gray-700/50 hover:bg-gray-600 text-white transition-colors backdrop-blur-md"
-            title="Piilota kuva"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onHide(img.id); }} className="p-3 rounded-full bg-gray-700/50 hover:bg-gray-600 text-white transition-colors backdrop-blur-md" title="Piilota kuva">
             <Trash2 size={24} />
           </button>
         )}
-        <button
-          onClick={onClose}
-          className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md"
-        >
+        <button onClick={onClose} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md">
           <X size={24} />
         </button>
       </div>
 
       {/* Counter */}
       {images.length > 1 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/70 text-sm font-medium">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[110] px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/70 text-sm font-medium pointer-events-none">
           {current + 1} / {images.length}
         </div>
       )}
 
-      {/* Main content */}
-      <div
-        className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-12"
-        onClick={e => e.stopPropagation()}
-      >
+      {/* Prev / Next (Hidden on very small screens, use swipe) */}
+      {images.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={current === 0} className="hidden sm:block absolute left-6 top-1/2 -translate-y-1/2 z-[110] p-3 rounded-full bg-black/40 hover:bg-rasala-gold/30 text-white disabled:opacity-20 transition-all backdrop-blur-md border border-white/10">
+            <ChevronLeft size={28} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} disabled={current === images.length - 1} className="hidden sm:block absolute right-6 top-1/2 -translate-y-1/2 z-[110] p-3 rounded-full bg-black/40 hover:bg-rasala-gold/30 text-white disabled:opacity-20 transition-all backdrop-blur-md border border-white/10">
+            <ChevronRight size={28} />
+          </button>
+        </>
+      )}
+
+      {/* Main content - Edge to Edge */}
+      <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             drag={isZoomed ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.7}
             onDragEnd={handleDragEnd}
-            className={`flex flex-col items-center w-full max-w-5xl ${!isZoomed ? 'touch-pan-y' : ''}`}
+            className="absolute inset-0 flex items-center justify-center touch-pan-y"
           >
-            {/* Image — fills as much screen as possible */}
-            <div className="w-full flex justify-center items-center" style={{ maxHeight: '75vh', overflow: 'hidden' }}>
-              <TransformWrapper
-                initialScale={1}
-                minScale={1}
-                maxScale={4}
-                centerOnInit
-                onTransform={(ref: any) => setIsZoomed(ref.state.scale > 1.05)}
-              >
-                <TransformComponent wrapperClass="w-full h-full flex justify-center items-center">
-                  <img
-                    src={img.src}
-                    alt={img.title}
-                    className="object-contain rounded-xl shadow-cinema transition-transform duration-300"
-                    style={{ 
-                      maxHeight: '75vh', 
-                      maxWidth: '100vw',
-                      transform: `rotate(${img.rotation || 0}deg)` 
-                    }}
-                  />
-                </TransformComponent>
-              </TransformWrapper>
-            </div>
-
-            {/* Caption */}
-            <div className="mt-4 text-center w-full max-w-2xl px-4" onClick={e => e.stopPropagation()}>
-              {img.year && (
-                <span className="text-rasala-gold text-sm font-bold tracking-widest">{img.year}</span>
-              )}
-              {!isEditing && <h2 className="font-serif text-2xl sm:text-3xl text-white mt-1">{img.title}</h2>}
-              
-              {isEditing ? (
-                <div className="mt-4 flex flex-col gap-3">
-                  <textarea
-                    autoFocus
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    placeholder="Kirjoita kuvateksti tai tarina tähän..."
-                    className="w-full min-h-[80px] max-h-32 bg-black/60 border border-white/20 rounded-xl p-4 text-white focus:border-rasala-gold outline-none resize-none"
-                  />
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 shrink-0">
-                    <button onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors w-full sm:w-auto">
-                      Peruuta
-                    </button>
-                    <button 
-                      onClick={() => { 
-                        if (onSaveCaption) {
-                          onSaveCaption(img.id, editText);
-                          setIsEditing(false);
-                        }
-                      }} 
-                      className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold flex items-center justify-center gap-2 w-full sm:w-auto"
-                    >
-                      <Save size={18} /> Tallenna
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                img.description && (
-                  <p className="text-white/80 mt-2 text-base leading-relaxed">{img.description}</p>
-                )
-              )}
-
-              {/* Metatiedot: Lataaja, Katselukerrat ja Alkuperäiskuva */}
-              <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-white/50 border-t border-white/10 pt-4">
-                {img.uploaderName && (
-                  <span>Lisännyt: <strong className="text-white/70">{img.uploaderName}</strong></span>
-                )}
-                {img.views !== undefined && (
-                  <span>Katsottu: <strong className="text-white/70">{img.views} krt</strong></span>
-                )}
-                
-                {img.rawDriveUrl ? (
-                  <a href={img.rawDriveUrl} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 font-medium underline">
-                    Avaa alkuperäinen kuva (Drive)
-                  </a>
-                ) : img.uploaderEmail ? (
-                  <a 
-                    href={`mailto:${img.uploaderEmail}?subject=Rasalapeli:%20Pyyntö%20alkuperäiselle%20kuvalle&body=Hei%20${img.uploaderName},%0A%0Apyytäisin%20alkuperäistä%20(korkearesoluutioista)%20versiota%20kuvasta:%20${img.id}.%0A%0AKiitos!`} 
-                    className="text-amber-500 hover:text-amber-400 font-medium underline"
-                  >
-                    Kysy alkuperäistä kuvaa (Sähköposti)
-                  </a>
-                ) : null}
-              </div>
-
-              {/* Kommentit */}
-              <Comments imageId={img.id} isAdmin={isAdmin || false} />
-            </div>
+            <TransformWrapper
+              initialScale={1}
+              minScale={1}
+              maxScale={4}
+              centerOnInit
+              onTransform={(ref: any) => setIsZoomed(ref.state.scale > 1.05)}
+            >
+              <TransformComponent wrapperClass="w-full h-full flex justify-center items-center">
+                <img
+                  src={img.src}
+                  alt={img.title}
+                  className="object-contain w-full h-full"
+                  style={{ 
+                    maxHeight: '100vh', 
+                    maxWidth: '100vw',
+                    transform: `rotate(${img.rotation || 0}deg)` 
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </TransformComponent>
+            </TransformWrapper>
           </motion.div>
         </AnimatePresence>
 
-        {/* Prev / Next */}
-        {images.length > 1 && (
-          <>
+        {/* Gradient Overlay for bottom info and actions */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 pb-8 sm:p-8 pointer-events-none flex items-end justify-between z-[105]">
+          
+          {/* Left Side: Caption */}
+          <div className="flex-1 max-w-3xl pr-4 pointer-events-auto" onClick={e => e.stopPropagation()}>
+            {img.year && <span className="text-rasala-gold text-sm font-bold tracking-widest">{img.year}</span>}
+            {!isEditing && <h2 className="font-serif text-2xl sm:text-3xl text-white mt-1 drop-shadow-md">{img.title}</h2>}
+            
+            {isEditing ? (
+              <div className="mt-4 flex flex-col gap-3">
+                 <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} className="w-full min-h-[80px] max-h-32 bg-black/80 border border-white/20 rounded-xl p-4 text-white focus:border-rasala-gold outline-none resize-none" placeholder="Kirjoita kuvateksti..." />
+                 <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    <button onClick={() => setIsEditing(false)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/10 font-medium w-full sm:w-auto">Peruuta</button>
+                    <button onClick={() => { if(onSaveCaption) { onSaveCaption(img.id, editText); setIsEditing(false); } }} className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold flex items-center justify-center gap-2 w-full sm:w-auto"><Save size={18}/> Tallenna</button>
+                 </div>
+              </div>
+            ) : (
+              img.description && <p className="text-white/90 mt-2 text-sm sm:text-base leading-relaxed drop-shadow-md line-clamp-3 hover:line-clamp-none transition-all">{img.description}</p>
+            )}
+          </div>
+
+          {/* Right Side: Action Buttons (Heart, Comments) */}
+          <div className="flex flex-col gap-4 items-center shrink-0 pointer-events-auto mb-2" onClick={e => e.stopPropagation()}>
+            {profile && (
+              <button
+                onClick={() => toggleFavorite(img.id)}
+                className="p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex flex-col items-center gap-1 transition-transform hover:scale-110 active:scale-90"
+              >
+                <Heart size={26} fill={profile.favorites?.includes(img.id) ? "#ef4444" : "none"} color={profile.favorites?.includes(img.id) ? "#ef4444" : "white"} />
+              </button>
+            )}
+            
             <button
-              onClick={prev}
-              disabled={current === 0}
-              className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/40 hover:bg-rasala-gold/30 text-white disabled:opacity-20 transition-all backdrop-blur-md border border-white/10"
+              onClick={() => setShowComments(true)}
+              className="p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex flex-col items-center gap-1 transition-transform hover:scale-110 active:scale-90"
             >
-              <ChevronLeft size={28} />
+              <MessageCircle size={26} color="white" />
             </button>
-            <button
-              onClick={next}
-              disabled={current === images.length - 1}
-              className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/40 hover:bg-rasala-gold/30 text-white disabled:opacity-20 transition-all backdrop-blur-md border border-white/10"
+          </div>
+        </div>
+
+        {/* Bottom Sheet for Comments & Metadata */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="absolute bottom-0 left-0 right-0 h-[85vh] bg-rasala-dark/95 backdrop-blur-xl border-t border-white/10 z-[120] rounded-t-3xl overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+              onClick={e => e.stopPropagation()}
             >
-              <ChevronRight size={28} />
-            </button>
-          </>
-        )}
+              <div className="w-full flex justify-center py-3 cursor-pointer shrink-0" onClick={() => setShowComments(false)}>
+                <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+              </div>
+              
+              <div className="overflow-y-auto px-4 sm:px-8 pb-safe flex-1 max-w-4xl mx-auto w-full">
+                <div className="flex justify-between items-center mb-6 mt-2">
+                  <h3 className="text-xl font-serif text-rasala-gold">Tiedot ja Kommentit</h3>
+                  <button onClick={() => setShowComments(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-white/70">
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                {/* Metatiedot */}
+                <div className="flex flex-wrap gap-4 text-sm text-white/70 bg-black/30 p-4 rounded-xl border border-white/5 mb-8">
+                  {img.uploaderName && <span>Lisännyt: <strong className="text-white">{img.uploaderName}</strong></span>}
+                  {img.views !== undefined && <span>Katsottu: <strong className="text-white">{img.views} krt</strong></span>}
+                  
+                  {img.rawDriveUrl ? (
+                    <a href={img.rawDriveUrl} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 font-medium underline w-full sm:w-auto">Avaa alkuperäinen kuva (Drive)</a>
+                  ) : img.uploaderEmail ? (
+                    <a href={`mailto:${img.uploaderEmail}?subject=Rasalapeli:%20Pyyntö%20alkuperäiselle%20kuvalle&body=Hei%20${img.uploaderName},%0A%0Apyytäisin%20alkuperäistä%20(korkearesoluutioista)%20versiota%20kuvasta:%20${img.id}.%0A%0AKiitos!`} className="text-amber-500 hover:text-amber-400 font-medium underline w-full sm:w-auto">Kysy alkuperäistä kuvaa (Sähköposti)</a>
+                  ) : null}
+                </div>
+
+                <Comments imageId={img.id} isAdmin={isAdmin || false} />
+                <div className="h-20" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

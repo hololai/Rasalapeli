@@ -142,6 +142,7 @@ export const MapView = () => {
         title: loc.title || '',
         description: loc.description || '',
         era: loc.era || 'growth',
+        pinType: loc.pinType || 'auto',
         imageId: loc.imageId || '',
         streetViewIframe: loc.streetViewIframe || '',
         customImageUrl: loc.customImageUrl || ''
@@ -345,6 +346,11 @@ export const MapView = () => {
 
   const getIcon = (loc: any) => {
     if (loc.isHome) return homeIcon;
+    
+    if (loc.pinType === 'story') return storyIcon;
+    if (loc.pinType === 'photos') return photoIcon;
+    if (loc.pinType === 'both') return bothIcon;
+
     const hasStory = !!loc.description && loc.description.length > 5;
     const hasPhotos = images.some(img => getEffectiveImage(img).locationId === loc.id) || 
                       loc.id === 'kotitontti' || !!loc.imageId || !!loc.customImageUrl || 
@@ -474,7 +480,7 @@ export const MapView = () => {
                 <MapClickHandler isAdmin={isAdminMode} onMapClick={(lat, lng) => {
                   if (mode !== 'free') return;
                   setEditingPin({ id: `village_custom_${Date.now()}`, lat, lng, isCustom: true });
-                  setFormData({ title: '', description: '', era: 'growth', imageId: '', streetViewIframe: '', customImageUrl: '' });
+                  setFormData({ title: '', description: '', era: 'growth', pinType: 'auto', imageId: '', streetViewIframe: '', customImageUrl: '' });
                   setPinEditorOpen(true);
                 }} />
                 <MapFlyTo center={mode === 'guided' ? [currentGuidedTarget.lat, currentGuidedTarget.lng] : [61.0515, 28.3150]} zoom={15} isGuided={mode === 'guided'} />
@@ -600,12 +606,12 @@ export const MapView = () => {
                   <input autoFocus type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Aikakausi</label>
-                  <select value={formData.era} onChange={e => setFormData({ ...formData, era: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none">
-                    <option value="historical">Historiallinen (Keltainen)</option>
-                    <option value="postwar">Jälleenrakennus (Harmaa)</option>
-                    <option value="growth">Kasvukausi (Oranssi)</option>
-                    <option value="modern">Nykypäivä (Vihreä)</option>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Nastan tyyppi (Väri)</label>
+                  <select value={formData.pinType || 'auto'} onChange={e => setFormData({ ...formData, pinType: e.target.value })} className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-2 text-white focus:border-rasala-gold outline-none">
+                    <option value="auto">Automaattinen (Suositus)</option>
+                    <option value="story">Pelkkä Tarina (Kultainen)</option>
+                    <option value="photos">Pelkät Kuvat (Sininen)</option>
+                    <option value="both">Molemmat (Vihreä)</option>
                   </select>
                 </div>
                 <div>

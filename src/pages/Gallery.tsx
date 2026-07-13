@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal } from 'lucide-react';
+import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
@@ -42,7 +42,7 @@ const DRIVE_LINKS: Record<string, string> = {
 };
 
 export const Gallery = () => {
-  const { profile } = useAuth();
+  const { profile, toggleFavorite } = useAuth();
   const isAdminUser = profile?.role === 'superadmin' || profile?.role === 'admin';
   const [isAdminMode, setIsAdminMode] = useState(false);
   
@@ -54,7 +54,8 @@ export const Gallery = () => {
 
   const [selectedDecade, setSelectedDecade] = useState<string>('Kaikki');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'default' | 'views'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'views' | 'favorites'>('default');
+  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -234,6 +235,10 @@ export const Gallery = () => {
       );
     }
 
+    if (sortBy === 'favorites' && profile?.favorites) {
+      list = list.filter(img => profile.favorites?.includes(img.id));
+    }
+
     return list.sort((a, b) => {
       if (sortBy === 'views') {
         const aViews = a.views || 0;
@@ -343,8 +348,10 @@ export const Gallery = () => {
           </div>
         </div>
 
-        {/* ── Vuosikymmen-valikko (Pillerit) ── */}
-        <div className="flex overflow-x-auto sm:flex-wrap gap-3 mb-10 pb-4 border-b border-white/10 py-1 px-1 -mx-4 sm:mx-0 sm:px-0 snap-x">
+        {/* ── Ylätyökalut (Mobiilissa piilotettu oletuksena) ── */}
+        <div className={`transition-all duration-500 overflow-hidden ${showFiltersMobile ? 'max-h-[1000px] opacity-100 mb-10' : 'max-h-0 opacity-0 sm:max-h-[1000px] sm:opacity-100 sm:mb-10'}`}>
+          {/* ── Vuosikymmen-valikko (Pillerit) ── */}
+          <div className="flex overflow-x-auto sm:flex-wrap gap-3 mb-6 pb-4 border-b border-white/10 py-1 px-1 -mx-4 sm:mx-0 sm:px-0 snap-x">
           {decades.map(dec => (
             <button
               key={dec}
@@ -358,10 +365,10 @@ export const Gallery = () => {
               {dec === 'Kaikki' ? 'Kaikki kuvat' : dec === 'Kotitalo' ? 'Kotitalo' : `${dec}-luku`}
             </button>
           ))}
-        </div>
+          </div>
 
-        {/* ── Haku ja Lajittelu ── */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-10 items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
+          {/* ── Haku ja Lajittelu ── */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
           <input
             type="text"
             placeholder="Hae nimellä, tekstillä tai asiasanalla..."
@@ -373,11 +380,12 @@ export const Gallery = () => {
             <span className="text-sm text-white/50 whitespace-nowrap">Lajittele:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'default' | 'views')}
+              onChange={(e) => setSortBy(e.target.value as 'default' | 'views' | 'favorites')}
               className="bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-rasala-gold transition-colors w-full sm:w-auto"
             >
               <option value="default">Viimeksi ladatut</option>
               <option value="views">Katsotuimmat ensin</option>
+              {profile && <option value="favorites">Omat suosikit</option>}
             </select>
           </div>
         </div>
@@ -398,6 +406,16 @@ export const Gallery = () => {
             </a>
           </div>
         )}
+        </div>
+
+        {/* ── Mobiilin Suodata & Hae Kelluva Nappi ── */}
+        <button
+          onClick={() => setShowFiltersMobile(!showFiltersMobile)}
+          className="sm:hidden fixed bottom-20 right-4 z-40 bg-rasala-gold text-black p-4 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.5)] flex items-center justify-center transition-transform active:scale-95"
+          title="Suodata ja hae kuvia"
+        >
+          <Filter size={24} />
+        </button>
 
         {/* ── Kuvagalleria ── */}
         {loading ? (
@@ -438,13 +456,25 @@ export const Gallery = () => {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none opacity-80" />
 
                           {/* Tarttumakahva raahaamista varten */}
-                          <div 
-                            {...provided.dragHandleProps} 
-                            className="absolute top-2 left-2 p-2 bg-black/60 hover:bg-amber-600 text-white rounded-lg cursor-grab active:cursor-grabbing backdrop-blur-md transition-colors touch-none select-none"
-                            title="Raahaa kuvaa muuttaaksesi järjestystä"
-                          >
-                            <GripHorizontal size={20} />
-                          </div>
+                          {isAdminMode && (
+                            <div 
+                              {...provided.dragHandleProps} 
+                              className="absolute top-2 left-2 p-2 bg-black/60 hover:bg-amber-600 text-white rounded-lg cursor-grab active:cursor-grabbing backdrop-blur-md transition-colors touch-none select-none z-10"
+                              title="Raahaa kuvaa muuttaaksesi järjestystä"
+                            >
+                              <GripHorizontal size={20} />
+                            </div>
+                          )}
+
+                          {profile && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(img.id); }}
+                              className={`absolute top-2 ${isAdminMode ? 'left-12' : 'left-2'} p-2 rounded-full backdrop-blur-md transition-colors z-10 ${profile.favorites?.includes(img.id) ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-black/60 text-white/70 hover:text-white hover:bg-black/80'}`}
+                              title={profile.favorites?.includes(img.id) ? "Poista suosikeista" : "Lisää suosikkeihin"}
+                            >
+                              <Heart size={20} fill={profile.favorites?.includes(img.id) ? "currentColor" : "none"} className={profile.favorites?.includes(img.id) ? "scale-110 transition-transform" : "transition-transform hover:scale-110"} />
+                            </button>
+                          )}
 
                           <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
                             <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
