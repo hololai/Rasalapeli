@@ -381,17 +381,17 @@ export const Gallery = () => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center gap-4 w-[90vw] sm:w-auto text-center bg-amber-600 border-2 border-amber-400 p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
+            className="fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 w-[90vw] sm:w-auto max-w-[400px] sm:max-w-none text-center bg-amber-600 border-2 border-amber-400 p-3 sm:p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
           >
-            <span className="font-bold">
-              {pendingCount} {pendingCount === 1 ? 'muutos odottaa' : 'muutosta odottaa'} tallennusta
+            <span className="font-bold text-sm sm:text-base leading-tight">
+              {pendingCount} {pendingCount === 1 ? 'muutos odottaa' : 'muutosta odottaa'}
             </span>
             <button 
               onClick={saveAllChangesToDB}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-5 py-2 rounded-xl font-bold transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 px-4 sm:px-5 py-2 rounded-xl text-sm sm:text-base font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
             >
-              {isSaving ? 'Tallennetaan...' : <><Save size={18} /> Tallenna tietokantaan</>}
+              {isSaving ? 'Tallennetaan...' : <><Save size={18} /> Tallenna <span className="hidden sm:inline">tietokantaan</span></>}
             </button>
           </motion.div>
         )}
@@ -498,12 +498,12 @@ export const Gallery = () => {
 
         {/* ── Palaa ylös -kelluva nappi ── */}
         <AnimatePresence>
-          {showScrollTop && (
+          {showScrollTop && !editingImage && !lightboxOpen && (
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-[90px] sm:bottom-10 left-1/2 -translate-x-1/2 sm:left-auto sm:right-10 z-[100]"
+              className="fixed bottom-[90px] sm:bottom-10 left-1/2 -translate-x-1/2 sm:left-auto sm:right-10 z-40"
             >
               <button 
                 onClick={scrollToTop}
@@ -696,44 +696,44 @@ export const Gallery = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm"
           >
             <motion.div 
               initial={{ y: 50, scale: 0.9 }}
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 20, scale: 0.9 }}
-              className="bg-rasala-dark border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative"
+              className="bg-rasala-dark border border-white/20 rounded-2xl p-4 sm:p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative max-h-[95vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setEditingImage(null)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors z-10"
               >
                 <X size={20} />
               </button>
               
-              <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-4">Muokkaa Tietoja</h3>
+              <h3 className="text-xl sm:text-2xl font-serif text-rasala-gold font-bold mb-4 pr-8">Muokkaa Tietoja</h3>
               
-              <div className="mb-4">
-                <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Tiedostonimi / Kuvan nimi</label>
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Tiedostonimi / Kuvan nimi</label>
                 <input 
                   type="text"
                   value={editFilename}
                   onChange={(e) => setEditFilename(e.target.value)}
-                  className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:border-rasala-gold outline-none font-mono"
+                  className="w-full bg-black/50 border border-white/20 rounded-xl px-3 sm:px-4 py-2 text-sm text-white focus:border-rasala-gold outline-none font-mono"
                 />
               </div>
               
-              <img src={editingImage.path} alt="" className="w-full h-48 object-cover rounded-xl mb-4 border border-white/10" />
+              <img src={editingImage.path} alt="" className="w-full h-32 sm:h-48 object-cover rounded-xl mb-3 sm:mb-4 border border-white/10" />
 
               <textarea 
                 autoFocus
                 value={editCaptionText}
                 onChange={(e) => setEditCaptionText(e.target.value)}
                 placeholder="Kirjoita tarina tai henkilöiden nimet tähän..."
-                className="w-full h-32 bg-black/50 border border-white/20 rounded-xl p-4 text-white placeholder:text-white/30 focus:border-rasala-gold focus:ring-1 focus:ring-rasala-gold outline-none resize-none transition-all"
+                className="w-full h-24 sm:h-32 bg-black/50 border border-white/20 rounded-xl p-3 sm:p-4 text-sm sm:text-base text-white placeholder:text-white/30 focus:border-rasala-gold focus:ring-1 focus:ring-rasala-gold outline-none resize-none transition-all"
               />
 
-              <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vuosi (Valinnainen)</label>
                   <input 
