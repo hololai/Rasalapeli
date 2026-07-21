@@ -702,7 +702,7 @@ export const Gallery = () => {
               initial={{ y: 50, scale: 0.9 }}
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 20, scale: 0.9 }}
-              className="bg-rasala-dark border border-white/20 rounded-2xl p-4 sm:p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative max-h-[95vh] overflow-y-auto"
+              className="bg-rasala-dark border border-white/20 rounded-2xl p-4 sm:p-6 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] relative max-h-[75dvh] sm:max-h-[90vh] overflow-y-auto mb-16 sm:mb-0"
             >
               <button 
                 onClick={() => setEditingImage(null)}
@@ -735,21 +735,21 @@ export const Gallery = () => {
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vuosi (Valinnainen)</label>
+                  <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Vuosi (Valinnainen)</label>
                   <input 
                     type="number" 
                     value={editYear} 
                     onChange={(e) => setEditYear(e.target.value)}
                     placeholder="Esim. 1974"
-                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:border-rasala-gold outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vuosikymmen</label>
+                  <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Vuosikymmen</label>
                   <select 
                     value={editDecade} 
                     onChange={(e) => setEditDecade(e.target.value)}
-                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:border-rasala-gold outline-none"
                   >
                     <option value="Kotitalo">Kotitalo</option>
                     <option value="1920">1920-luku</option>
@@ -766,11 +766,11 @@ export const Gallery = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Sijainti kartalla</label>
+                  <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Sijainti kartalla</label>
                   <select 
                     value={editLocationId} 
                     onChange={(e) => setEditLocationId(e.target.value)}
-                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:border-rasala-gold outline-none"
                   >
                     <option value="">-- Ei nastaa --</option>
                     {locations.map(loc => (
@@ -779,18 +779,18 @@ export const Gallery = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vapaa paikkakunta</label>
+                  <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Vapaa paikkakunta</label>
                   <input 
                     type="text"
                     value={editLocationText}
                     onChange={(e) => setEditLocationText(e.target.value)}
                     placeholder="Esim. Ranua"
-                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:border-rasala-gold outline-none"
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-4 sm:mt-6 flex justify-end gap-3 pb-2 sm:pb-0">
                 <button onClick={() => setEditingImage(null)} className="px-5 py-2 rounded-xl text-white/60 hover:bg-white/5 font-medium transition-colors">
                   Peruuta
                 </button>
