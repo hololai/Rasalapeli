@@ -97,10 +97,14 @@ export const ImageUploader = ({ onUploadComplete }: { onUploadComplete?: () => v
         const docId = filename.replace(/\.[^/.]+$/, "");
 
         let compressedFile = file;
-        try {
-          compressedFile = await imageCompression(file, options) as File;
-        } catch (err) {
-          console.error("Kuvan pakkaus epäonnistui, käytetään alkuperäistä:", err);
+        
+        // Pakataan vain, jos kuva on yli 1.5 Megatavua
+        if (file.size > 1.5 * 1024 * 1024) {
+          try {
+            compressedFile = await imageCompression(file, options) as File;
+          } catch (err) {
+            console.error("Kuvan pakkaus epäonnistui, käytetään alkuperäistä:", err);
+          }
         }
 
         const storageRef = ref(storage, storagePath);

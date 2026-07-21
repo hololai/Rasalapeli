@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2, Heart, MessageCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2, Heart, MessageCircle, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Comments } from './Comments';
@@ -174,8 +174,18 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
           
           {/* Left Side: Caption */}
           <div className="flex-1 max-w-3xl pr-4 pointer-events-auto" onClick={e => e.stopPropagation()}>
-            {img.year && <span className="text-rasala-gold text-sm font-bold tracking-widest">{img.year}</span>}
-            {!isEditing && <h2 className="font-serif text-2xl sm:text-3xl text-white mt-1 drop-shadow-md">{img.title}</h2>}
+            <div className="flex items-center gap-3 mb-1">
+              {img.year && <span className="text-rasala-gold text-sm font-bold tracking-widest">{img.year}</span>}
+              {img.uploaderName && (
+                <div 
+                  className="flex items-center justify-center p-1.5 rounded-full bg-black/30 hover:bg-black/50 transition-colors border border-white/10 cursor-help"
+                  title={`Lisännyt: ${img.uploaderName}`}
+                >
+                  <User size={14} className="text-white/80" />
+                </div>
+              )}
+            </div>
+            {!isEditing && <h2 className="font-serif text-2xl sm:text-3xl text-white drop-shadow-md">{img.title}</h2>}
             
             {isEditing ? (
               <div className="mt-4 flex flex-col gap-3">

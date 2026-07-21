@@ -26,6 +26,7 @@ interface GalleryImage {
   rawDriveUrl?: string;
   locationId?: string;
   locationText?: string;
+  year?: string;
 }
 
 const DRIVE_LINKS: Record<string, string> = {
@@ -84,6 +85,9 @@ export const Gallery = () => {
   const [editCaptionText, setEditCaptionText] = useState('');
   const [editLocationId, setEditLocationId] = useState('');
   const [editLocationText, setEditLocationText] = useState('');
+  const [editYear, setEditYear] = useState('');
+  const [editDecade, setEditDecade] = useState('1970');
+  const [editFilename, setEditFilename] = useState('');
   const [locations, setLocations] = useState<{id: string, title: string}[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -110,6 +114,7 @@ export const Gallery = () => {
           orderIndex: data.orderIndex || 0,
           locationId: data.locationId,
           locationText: data.locationText,
+          year: data.year,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0)
         });
       });
@@ -189,7 +194,10 @@ export const Gallery = () => {
     handleUpdate(editingImage.id, { 
       caption: editCaptionText,
       locationId: finalLocationId || undefined,
-      locationText: editLocationText || undefined
+      locationText: editLocationText || undefined,
+      year: editYear || undefined,
+      decade: editDecade,
+      filename: editFilename
     });
     setEditingImage(null);
   };
@@ -349,7 +357,8 @@ export const Gallery = () => {
     id: img.id,
     src: img.path,
     title: img.decade,
-    description: img.caption || img.filename,
+    year: img.year,
+    description: img.caption || (isAdminMode ? img.filename : ''),
     rotation: img.rotation || 0,
     uploaderName: img.uploaderName,
     uploaderEmail: img.uploaderEmail,
@@ -570,7 +579,7 @@ export const Gallery = () => {
                             <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
                               <RotateCw size={16} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); setEditLocationId(img.locationId || ''); setEditLocationText(img.locationText || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); setEditLocationId(img.locationId || ''); setEditLocationText(img.locationText || ''); setEditYear(img.year || ''); setEditDecade(img.decade || '1970'); setEditFilename(img.filename || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
                               <Edit3 size={16} />
                             </button>
                             {img.hidden ? (
@@ -588,7 +597,7 @@ export const Gallery = () => {
                             <p className="text-white/90 text-sm font-medium drop-shadow-md mb-1">{img.caption || "Ei kuvatekstiä"}</p>
                             <div className="flex justify-between items-center text-xs">
                               <span className="text-rasala-gold font-bold bg-black/50 px-2 py-0.5 rounded-full">{img.decade}</span>
-                              <span className="text-white/50">{img.filename}</span>
+                              {isAdminMode && <span className="text-white/50">{img.filename}</span>}
                             </div>
                           </div>
 
@@ -703,7 +712,16 @@ export const Gallery = () => {
               </button>
               
               <h3 className="text-2xl font-serif text-rasala-gold font-bold mb-4">Muokkaa Tietoja</h3>
-              <p className="text-sm text-white/50 mb-4 font-mono">{editingImage.filename}</p>
+              
+              <div className="mb-4">
+                <label className="block text-xs uppercase tracking-widest text-white/50 mb-1">Tiedostonimi / Kuvan nimi</label>
+                <input 
+                  type="text"
+                  value={editFilename}
+                  onChange={(e) => setEditFilename(e.target.value)}
+                  className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:border-rasala-gold outline-none font-mono"
+                />
+              </div>
               
               <img src={editingImage.path} alt="" className="w-full h-48 object-cover rounded-xl mb-4 border border-white/10" />
 
@@ -716,6 +734,37 @@ export const Gallery = () => {
               />
 
               <div className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vuosi (Valinnainen)</label>
+                  <input 
+                    type="number" 
+                    value={editYear} 
+                    onChange={(e) => setEditYear(e.target.value)}
+                    placeholder="Esim. 1974"
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Vuosikymmen</label>
+                  <select 
+                    value={editDecade} 
+                    onChange={(e) => setEditDecade(e.target.value)}
+                    className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-rasala-gold outline-none"
+                  >
+                    <option value="Kotitalo">Kotitalo</option>
+                    <option value="1920">1920-luku</option>
+                    <option value="1930">1930-luku</option>
+                    <option value="1940">1940-luku</option>
+                    <option value="1950">1950-luku</option>
+                    <option value="1960">1960-luku</option>
+                    <option value="1970">1970-luku</option>
+                    <option value="1980">1980-luku</option>
+                    <option value="1990">1990-luku</option>
+                    <option value="2000">2000-luku</option>
+                    <option value="2010">2010-luku</option>
+                    <option value="2020">2020-luku</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Sijainti kartalla</label>
                   <select 
