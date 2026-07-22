@@ -30,6 +30,8 @@ export const Quiz = () => {
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'wrong'>('none');
   const [isFinished, setIsFinished] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [score, setScore] = useState(0);
+  const [hasGuessedWrong, setHasGuessedWrong] = useState(false);
 
   // Admin-statet
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
@@ -118,23 +120,30 @@ export const Quiz = () => {
     if (feedback !== 'none' || !question) return;
     if (option === question.correctAnswer) {
       setFeedback('correct');
+      if (!hasGuessedWrong) {
+        setScore(s => s + 1);
+      }
       setTimeout(() => {
         if (currentLevel < questions.length - 1) {
           setCurrentLevel(l => l + 1);
           setFeedback('none');
           setShowHint(false);
+          setHasGuessedWrong(false);
         } else {
           setIsFinished(true);
         }
       }, 1400);
     } else {
       setFeedback('wrong');
+      setHasGuessedWrong(true);
       setTimeout(() => setFeedback('none'), 900);
     }
   };
 
   const resetQuiz = () => {
     setCurrentLevel(0);
+    setScore(0);
+    setHasGuessedWrong(false);
     setFeedback('none');
     setIsFinished(false);
     setShowHint(false);
@@ -334,6 +343,14 @@ export const Quiz = () => {
 
   // Valmis -näkymä
   if (isFinished) {
+    const grade = Math.round(4 + (score / questions.length) * 6);
+    
+    let feedbackText = "";
+    if (grade === 10) feedbackText = "Täydellistä! Olet todellinen Rasalan mestarisalapoliisi!";
+    else if (grade >= 8) feedbackText = "Hienoa työtä! Tunnet suvun salat paremmin kuin useimmat.";
+    else if (grade >= 6) feedbackText = "Hyvin yritetty! Vielä muutama tarina opittavana.";
+    else feedbackText = "Taisi mennä arvailuksi? Kysy sukulaisilta vinkkejä ja yritä uudelleen!";
+
     return (
       <div className="min-h-screen bg-rasala-dark flex items-center justify-center px-4 relative">
         {isAdminUser && (
@@ -345,24 +362,33 @@ export const Quiz = () => {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 16 }}
-          className="cinema-card border border-rasala-gold/30 p-10 sm:p-16 text-center max-w-lg w-full shadow-gold-lg"
+          className="cinema-card border border-rasala-gold/30 p-10 sm:p-12 text-center max-w-lg w-full shadow-gold-lg relative overflow-hidden"
         >
+          {grade === 10 && (
+             <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%)' }}></div>
+          )}
           <motion.div animate={{ rotate: [0, -10, 10, -5, 5, 0] }} transition={{ delay: 0.3, duration: 0.6 }}>
-            <Trophy size={72} className="text-rasala-gold mx-auto mb-6" />
+            <Trophy size={72} className="text-rasala-gold mx-auto mb-6 relative z-10" />
           </motion.div>
-          <h1 className="font-serif text-4xl sm:text-5xl font-black text-white mb-3">
-            <span className="gold-shimmer">Onnittelut!</span>
+          <h1 className="font-serif text-3xl sm:text-4xl font-black text-white mb-2 relative z-10">
+            <span className="gold-shimmer">Tietovisa suoritettu!</span>
           </h1>
-          <p className="text-white/60 text-lg mb-8 leading-relaxed">
-            Olet ratkaissut Rasalan salaisuuden.<br />
-            Olet todellinen mestarisalapoliisi!
+          
+          <div className="bg-black/40 border border-rasala-gold/30 rounded-xl p-6 my-6 relative z-10">
+            <p className="text-white/60 text-sm tracking-widest uppercase mb-1">Tuloksesi</p>
+            <p className="text-5xl font-bold text-rasala-gold mb-4">{score} / {questions.length}</p>
+            
+            <div className="flex justify-center items-center gap-4 border-t border-white/10 pt-4">
+              <span className="text-white/60 text-sm tracking-widest uppercase">Kouluarvosana</span>
+              <span className="text-3xl font-black text-white bg-rasala-gold/20 px-4 py-1 rounded-lg border border-rasala-gold/50">{grade}</span>
+            </div>
+          </div>
+
+          <p className="text-white/80 text-lg mb-8 leading-relaxed italic relative z-10">
+            "{feedbackText}"
           </p>
-          <img
-            src="https://placehold.co/400x260/1c2b1e/d4af37?text=🏆+Rasalan+Mestari"
-            alt="Palkinto"
-            className="w-full rounded-xl mb-8 shadow-lg"
-          />
-          <button onClick={resetQuiz} className="btn-gold w-full py-4 rounded-2xl text-base">
+
+          <button onClick={resetQuiz} className="btn-gold w-full py-4 rounded-2xl text-base relative z-10">
             <span>Pelaa uudelleen</span>
           </button>
         </motion.div>
