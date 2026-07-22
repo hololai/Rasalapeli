@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Hae rooli tietokannasta (Firestore)
+    function getRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isSuperAdmin() {
+      return request.auth.token.email == 'heikki.laivamaa@gmail.com' || getRole() == 'superadmin';
+    }
+    
+    function isAdmin() {
+      return getRole() == 'admin';
+    }
+
+    match /{allPaths=**} {
+      // Kuka tahansa kirjautunut (jopa 'pending') saa ladata alkuperäisen kuvan katselua varten
+      allow read: if request.auth != null;
+      
+      // Vain ylläpitäjät saavat ladata, päivittää tai poistaa tiedostoja
+      allow write: if request.auth != null && (isSuperAdmin() || isAdmin());
+    }
+  }
+}

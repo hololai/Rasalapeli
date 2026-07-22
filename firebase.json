@@ -1,1 +1,16 @@
-{"hosting":{"public":"auth-hosting","ignore":["firebase.json","**/.*","**/node_modules/**"]}}
+{
+  "hosting": {
+    "public": "auth-hosting",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

@@ -40,10 +40,26 @@ service cloud.firestore {
       allow write: if request.auth != null && (isSuperAdmin() || isAdmin());
     }
 
+    function isPredefinedAdmin(email) {
+      return email in [
+        'hannulaivamaa@gmail.com',
+        'helenalaivalahti@gmail.com',
+        'juhaville.laivamaa@gmail.com',
+        'markkulaivamaa7@gmail.com',
+        'outi.myllarinen@gmail.com',
+        'perttu.laivamaa@gmail.com',
+        'tiina.ilmanen@gmail.com',
+        'katariina.laivamaa@gmail.com'
+      ];
+    }
+
     match /users/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId && 
                     (request.resource.data.role == 'pending' || 
-                    (request.auth.token.email != null && request.auth.token.email == 'heikki.laivamaa@gmail.com'));
+                    (request.auth.token.email != null && (
+                      (request.resource.data.role == 'superadmin' && request.auth.token.email == 'heikki.laivamaa@gmail.com') ||
+                      (request.resource.data.role == 'admin' && isPredefinedAdmin(request.auth.token.email))
+                    )));
       allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin() || isAdmin());
       
       // SUPERADMIN SÄÄNTÖ: saa tehdä mitä vain muiden profiileille
