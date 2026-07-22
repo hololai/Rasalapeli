@@ -473,7 +473,7 @@ export const Gallery = () => {
           <div className="flex items-center gap-3">
             {isAdminUser && (
               <>
-                {isAdminMode && locations.length > 0 && (
+                {isAdminMode && profile?.role === 'superadmin' && locations.length > 0 && (
                    <button onClick={autoLinkLocations} className="flex items-center gap-2 px-4 py-2 bg-blue-600/50 hover:bg-blue-500 rounded-xl transition-all shadow-lg text-sm font-bold border border-blue-400">
                      <MapPin size={18} /> Yhdistä Sijainnit
                    </button>
