@@ -287,7 +287,6 @@ export const Gallery = () => {
         return img;
       }));
       setPendingChanges({});
-      alert("Muutokset tallennettu tietokantaan!");
     } catch (e) {
       console.error(e);
       alert("Virhe tallennuksessa!");
@@ -821,6 +820,11 @@ export const Gallery = () => {
               // Päivitetään myös paikallinen tila, jotta lajittelu yms. toimii heti, 
               // mutta EI lisätä pendingChangesiin, jotta käyttäjää ei vaivata "Tallenna" -napilla.
               setImages(prev => prev.map(img => img.id === id ? { ...img, views: (img.views || 0) + 1 } : img));
+            }}
+            onIndexChange={(index) => {
+              if (index >= visibleCount - 4) {
+                setVisibleCount(prev => Math.min(displayImages.length, prev + 24));
+              }
             }}
           />
         )}

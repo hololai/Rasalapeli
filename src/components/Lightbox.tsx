@@ -14,9 +14,10 @@ interface LightboxProps {
   onHide?: (id: string) => void;
   onSaveCaption?: (id: string, text: string) => void;
   onView?: (id: string) => void;
+  onIndexChange?: (index: number) => void;
 }
 
-export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption, onView }) => {
+export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onClose, isAdmin, onRotate, onHide, onSaveCaption, onView, onIndexChange }) => {
   const { profile, toggleFavorite } = useAuth();
   const [current, setCurrent] = useState(startIndex);
   const [direction, setDirection] = useState(0);
@@ -40,19 +41,28 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
     if (images[current] && onView) {
       onView(images[current].id);
     }
+    if (onIndexChange) {
+      onIndexChange(current);
+    }
   }, [current]);
 
   const prev = () => {
-    if (current > 0) {
-      setDirection(-1);
-      setCurrent(current - 1);
-    }
+    setCurrent(c => {
+      if (c > 0) {
+        setDirection(-1);
+        return c - 1;
+      }
+      return c;
+    });
   };
   const next = () => {
-    if (current < images.length - 1) {
-      setDirection(1);
-      setCurrent(current + 1);
-    }
+    setCurrent(c => {
+      if (c < images.length - 1) {
+        setDirection(1);
+        return c + 1;
+      }
+      return c;
+    });
   };
 
   // Swaippauksen käsittely
