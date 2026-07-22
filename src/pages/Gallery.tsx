@@ -90,6 +90,7 @@ export const Gallery = () => {
   const [editYear, setEditYear] = useState('');
   const [editDecade, setEditDecade] = useState('1970');
   const [editFilename, setEditFilename] = useState('');
+  const [editInPresentation, setEditInPresentation] = useState(false);
   const [locations, setLocations] = useState<{id: string, title: string}[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -199,7 +200,8 @@ export const Gallery = () => {
       locationText: editLocationText || undefined,
       year: editYear || undefined,
       decade: editDecade,
-      filename: editFilename
+      filename: editFilename,
+      inPresentation: editInPresentation
     });
     setEditingImage(null);
   };
@@ -625,7 +627,7 @@ export const Gallery = () => {
                             <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
                               <RotateCw size={16} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); setEditLocationId(img.locationId || ''); setEditLocationText(img.locationText || ''); setEditYear(img.year || ''); setEditDecade(img.decade || '1970'); setEditFilename(img.filename || ''); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingImage(img); setEditCaptionText(img.caption || ''); setEditLocationId(img.locationId || ''); setEditLocationText(img.locationText || ''); setEditYear(img.year || ''); setEditDecade(img.decade || '1970'); setEditFilename(img.filename || ''); setEditInPresentation(img.inPresentation || false); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Muokkaa kuvatekstiä">
                               <Edit3 size={16} />
                             </button>
                             {img.hidden ? (
@@ -757,7 +759,17 @@ export const Gallery = () => {
                 <X size={20} />
               </button>
               
-              <h3 className="text-xl sm:text-2xl font-serif text-rasala-gold font-bold mb-4 pr-8">Muokkaa Tietoja</h3>
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl sm:text-2xl font-serif text-rasala-gold font-bold pr-4">Muokkaa Tietoja</h3>
+                <button 
+                  onClick={() => setEditInPresentation(!editInPresentation)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border ${editInPresentation ? 'bg-rasala-gold/90 text-amber-900 border-rasala-gold shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-black/50 text-white/50 border-white/20 hover:text-white hover:border-white/40'}`}
+                  title="Lisää tai poista yhteisestä esityksestä"
+                >
+                  <MonitorPlay size={14} />
+                  {editInPresentation ? 'Esityksessä' : 'Esitykseen'}
+                </button>
+              </div>
               
               <div className="mb-3 sm:mb-4">
                 <label className="block text-[10px] sm:text-xs uppercase tracking-widest text-white/50 mb-1">Tiedostonimi / Kuvan nimi</label>
