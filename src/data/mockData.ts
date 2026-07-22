@@ -364,6 +364,34 @@ export const quizCollection = [
     hint: "Alkaa R-kirjaimella.",
     options: ["Laivamaa", "Korhonen", "Romppainen", "Illikainen"],
     correctAnswer: "Romppainen"
+  },
+  {
+    id: 21,
+    question: "Kenen mukaan Vikke-pappa sai molemmat ristimänimensä (Vihtori Akseli)?",
+    hint: "Liittyy isovanhempiin.",
+    options: ["Kummisedän, Akseli Vihtori Romppaisen, mukaan", "Suomen sen aikaisen presidentin mukaan", "Viken oman isoisän (papan), Viktor Axel Breilinin, mukaan", "Naapurissa asuneen sähkömiehen mukaan"],
+    correctAnswer: "Viken oman isoisän (papan), Viktor Axel Breilinin, mukaan"
+  },
+  {
+    id: 22,
+    question: "Kuinka vanha Ella-mummu oli jäätyään leskeksi ja kahdeksan lapsen yksinhuoltajaksi?",
+    hint: "Alle nelikymppinen.",
+    options: ["32 vuotta", "38 vuotta", "45 vuotta", "50 vuotta"],
+    correctAnswer: "38 vuotta"
+  },
+  {
+    id: 23,
+    question: "Mikä oli Vikke-papan ammatti?",
+    hint: "Töissä piti osata varoa virtaa.",
+    options: ["Kirvesmies", "Autonasentaja", "Sähkömies", "Poliisi"],
+    correctAnswer: "Sähkömies"
+  },
+  {
+    id: 24,
+    question: "Laskutehtävä: Laske yhteen suvun Jaakot! Laivamaan Jaakko (1886–1951) + Jaakko Laivamaa (1931–2026) + Jaakko Virpi + Jaakko Laivamaa (1985) + Jaakko Ilmanen (1999) + Jaakko Lahtinen (2014) = ?",
+    hint: "Laske nimet tarkasti yhteen.",
+    options: ["4 Jaakkoa", "5 Jaakkoa", "6 Jaakkoa", "7 Jaakkoa"],
+    correctAnswer: "6 Jaakkoa"
   }
 ];
 
