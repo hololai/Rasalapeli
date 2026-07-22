@@ -115,9 +115,14 @@ export const Gallery = () => {
           rotation: data.rotation || 0,
           hidden: data.hidden || false,
           orderIndex: data.orderIndex || 0,
+          tags: data.tags,
+          views: data.views,
+          rawDriveUrl: data.rawDriveUrl,
           locationId: data.locationId,
           locationText: data.locationText,
           year: data.year,
+          inPresentation: data.inPresentation || false,
+          presentationOrder: data.presentationOrder,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0)
         });
       });
@@ -194,7 +199,7 @@ export const Gallery = () => {
       if (match) finalLocationId = match.id;
     }
 
-    handleUpdate(editingImage.id, { 
+    const updates = { 
       caption: editCaptionText,
       locationId: finalLocationId || undefined,
       locationText: editLocationText || undefined,
@@ -202,8 +207,18 @@ export const Gallery = () => {
       decade: editDecade,
       filename: editFilename,
       inPresentation: editInPresentation
-    });
+    };
+    
+    // Päivitetään tila ja välitön tallennus erikseen
+    handleUpdate(editingImage.id, updates);
     setEditingImage(null);
+    
+    // Välitön tallennus muokkausikkunasta poistuttaessa (käyttäjä olettaa napin tallentavan lopullisesti)
+    setTimeout(() => {
+      // simulate clicking the save button to flush pending changes
+      const btn = document.getElementById('floating-save-btn');
+      if (btn) btn.click();
+    }, 100);
   };
 
   const autoLinkLocations = () => {
@@ -426,6 +441,7 @@ export const Gallery = () => {
               {pendingCount} {pendingCount === 1 ? 'muutos odottaa' : 'muutosta odottaa'}
             </span>
             <button 
+              id="floating-save-btn"
               onClick={saveAllChangesToDB}
               disabled={isSaving}
               className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 px-4 sm:px-5 py-2 rounded-xl text-sm sm:text-base font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
