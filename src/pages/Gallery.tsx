@@ -489,7 +489,7 @@ export const Gallery = () => {
                   : 'bg-black/40 text-white/70 border-white/10 hover:border-white/30 hover:bg-white/10 backdrop-blur-sm'
               }`}
             >
-              {dec === 'Kaikki' ? 'Kaikki kuvat' : dec === 'Kotitalo' ? 'Kotitalo' : `${dec}-luku`}
+              {dec === 'Kaikki' ? 'Kaikki kuvat' : dec === 'Kotitalo' ? 'Kotitalo' : dec === 'Etusivu' ? 'Etusivu' : dec === 'Kuvaesitys' ? 'Kuvaesitys' : `${dec}-luku`}
             </button>
           ))}
           </div>
