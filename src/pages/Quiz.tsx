@@ -81,6 +81,36 @@ export const Quiz = () => {
     }
   };
 
+  const syncDefaultQuestions = async () => {
+    if (!window.confirm("Tämä lisää puuttuvat oletuskysymykset tietokantaan. Jatketaanko?")) return;
+    try {
+      setLoading(true);
+      let added = 0;
+      for (let i = 0; i < quizCollection.length; i++) {
+        const q = quizCollection[i];
+        const exists = questions.find(existing => existing.question === q.question);
+        if (!exists) {
+          const newId = `q_seeded_${q.id}`;
+          await setDoc(doc(db, 'quiz_questions', newId), {
+            question: q.question,
+            hint: q.hint || "",
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            orderIndex: questions.length + added
+          });
+          added++;
+        }
+      }
+      await fetchQuestions();
+      alert(`Lisättiin ${added} uutta kysymystä kantaan!`);
+    } catch (e) {
+      console.error(e);
+      alert("Virhe synkronoinnissa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── PELIN LOGIIKKA ──
   const question = questions[currentLevel];
 
@@ -201,15 +231,19 @@ export const Quiz = () => {
             </div>
           ) : (
             <>
-              <button 
-                onClick={() => {
-                  setEditingQuestion({ id: 'NEW', question: '', hint: '', options: ['', '', '', ''], correctAnswer: '', orderIndex: 0 });
-                  setEditForm({ question: '', hint: '', options: ['', '', '', ''], correctAnswer: '' });
-                }}
-                className="w-full mb-6 p-4 border border-dashed border-rasala-gold/50 rounded-xl text-rasala-gold flex items-center justify-center gap-2 hover:bg-rasala-gold/10 transition"
-              >
-                <Plus size={20} /> Lisää Uusi Kysymys
-              </button>
+              <div className="bg-black/40 rounded-2xl p-6 border border-white/10 mb-8 shadow-2xl">
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                  <button onClick={() => {
+                    setEditingQuestion({ id: 'NEW', question: '', hint: '', options: ['', '', '', ''], correctAnswer: '', orderIndex: 0 });
+                    setEditForm({ question: '', hint: '', options: ['', '', '', ''], correctAnswer: '' });
+                  }} className="bg-rasala-gold text-black px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-amber-400 transition-colors shadow-lg">
+                    <Plus size={20} /> Lisää Uusi Kysymys
+                  </button>
+                  <button onClick={syncDefaultQuestions} className="bg-blue-600/20 text-blue-400 px-6 py-3 rounded-xl font-bold border border-blue-600/30 hover:bg-blue-600/40 transition-colors">
+                    Hae puuttuvat oletuskysymykset
+                  </button>
+                </div>
+              </div>
 
               <DragDropContext onDragEnd={handleDragEnd}>
                 <Droppable droppableId="questions-list">

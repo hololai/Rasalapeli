@@ -294,6 +294,34 @@ export const quizCollection = [
     hint: "Kirjan nimi viittasi vauhtiin ja lajiin.",
     options: ["Yleisurheilu Raketti -kirjaan", "Suureen urheilukirjaan", "Koulun ruutuvihkoon", "Mustolan satamakirjaan"],
     correctAnswer: "Yleisurheilu Raketti -kirjaan",
+  },
+  {
+    id: 11,
+    question: "Mihin kulkuneuvoon Heikki (Hessu) kiinnitti ison pyydystämänsä hauen polkiessaan kotiin kädet veressä ja \"naama messingillä\"?",
+    hint: "Kaksipyöräinen kulkuväline.",
+    options: ["Keltaiseen potkulautaan", "Vihreään Jopoon", "Punaiseen traktoriin", "Naapurin mopoon"],
+    correctAnswer: "Vihreään Jopoon",
+  },
+  {
+    id: 12,
+    question: "Kuka veljeksistä jaksoi vetää kaikista eniten leukoja Rasalan yleisurheilukisoissa?",
+    hint: "Ei Make, eikä Hannu, eikä Ville.",
+    options: ["Pepe", "Make", "Hannu", "Ville"],
+    correctAnswer: "Pepe",
+  },
+  {
+    id: 13,
+    question: "Minkä tärkeän rakennelman pojat yrittivät muurata Rasalan pikkumökkiin?",
+    hint: "Vinkki: liittyy tuleen ja savuun.",
+    options: ["Ison pizzauunin", "Saunan kiukaan", "Piipun ja palomuurin", "Koirankopin"],
+    correctAnswer: "Piipun ja palomuurin",
+  },
+  {
+    id: 14,
+    question: "Minkä eläimen mukaan oli nimetty mäki, jota Pepe laski alas pyörällä niin kovaa, että törmäsi autoon?",
+    hint: "Pieni kaivautuva eläin.",
+    options: ["Karhun", "Ketun", "Sammakon", "Myyrän"],
+    correctAnswer: "Myyrän",
   }
 ];
 
