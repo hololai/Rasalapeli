@@ -322,6 +322,48 @@ export const quizCollection = [
     hint: "Pieni kaivautuva eläin.",
     options: ["Karhun", "Ketun", "Sammakon", "Myyrän"],
     correctAnswer: "Myyrän",
+  },
+  {
+    id: 15,
+    question: "Mikä Rasalan iso tupa oli alun perin, ennen kuin siitä tehtiin koti?",
+    hint: "Liittyy isoihin ajoneuvoihin.",
+    options: ["Valtava kanala", "Kuorma-autotalli", "Vanha kyläkoulu", "Salainen karkkitehdas"],
+    correctAnswer: "Kuorma-autotalli"
+  },
+  {
+    id: 16,
+    question: "Millainen hurja ja erikoinen henkilö asui kerran Rasalan naapurissa?",
+    hint: "Laiton ammatti.",
+    options: ["Sirkuspelle", "Salainen agentti", "Taikuri", "Pankkiryöstäjä"],
+    correctAnswer: "Pankkiryöstäjä"
+  },
+  {
+    id: 17,
+    question: "Mikä oli Rasalassa asuneen ison vuohipukin nimi?",
+    hint: "Miehen etunimi.",
+    options: ["Mauri", "Teuvo", "Kyösti", "Jorma"],
+    correctAnswer: "Teuvo"
+  },
+  {
+    id: 18,
+    question: "Mikä on Vikke-papan oikea, kokonainen etunimi?",
+    hint: "Kaksi nimeä, jotka alkavat V:llä ja A:lla.",
+    options: ["Veikko Antero", "Vilho Armas", "Vihtori Akseli", "Väinö Allan"],
+    correctAnswer: "Vihtori Akseli"
+  },
+  {
+    id: 19,
+    question: "Mikä on Ella-mummun oikea, kokonainen etunimi?",
+    hint: "Toinen nimi on yleinen suomalainen I-kirjaimella alkava nimi.",
+    options: ["Ella Inkeri", "Ella Anneli", "Ella Maria", "Ella Kaarina"],
+    correctAnswer: "Ella Inkeri"
+  },
+  {
+    id: 20,
+    question: "Mikä oli Ella-mummun tyttönimi eli sukunimi silloin, kun hänet kastettiin vauvana?",
+    hint: "Alkaa R-kirjaimella.",
+    options: ["Laivamaa", "Korhonen", "Romppainen", "Illikainen"],
+    correctAnswer: "Romppainen"
   }
 ];
 
