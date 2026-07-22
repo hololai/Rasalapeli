@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart, MapPin, ArrowUp } from 'lucide-react';
+import { Lock, Unlock, ZoomIn, Edit3, X, Save, RotateCw, Trash2, CheckCircle, Download, GripHorizontal, Filter, Heart, MapPin, ArrowUp, MonitorPlay } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbox } from '../components/Lightbox';
@@ -18,6 +18,8 @@ interface GalleryImage {
   rotation: number;
   hidden: boolean;
   orderIndex?: number;
+  inPresentation?: boolean;
+  presentationOrder?: number;
   createdAt?: any;
   uploaderName?: string;
   uploaderEmail?: string;
@@ -55,7 +57,7 @@ export const Gallery = () => {
   // Pending changes for bulk save
   const [pendingChanges, setPendingChanges] = useState<Record<string, Partial<GalleryImage>>>({});
 
-  const [selectedDecade, setSelectedDecade] = useState<string>('Kaikki');
+  const [selectedDecade, setSelectedDecade] = useState<string>('Etusivu');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'views' | 'favorites'>('default');
   
@@ -224,8 +226,11 @@ export const Gallery = () => {
   };
 
   const handleHide = (id: string) => {
-    if (!window.confirm("Haluatko varmasti piilottaa tämän kuvan? Se ei näy enää vieraille.")) return;
     handleUpdate(id, { hidden: true });
+  };
+
+  const togglePresentation = (img: GalleryImage) => {
+    handleUpdate(img.id, { inPresentation: !img.inPresentation });
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -239,12 +244,19 @@ export const Gallery = () => {
     const [reorderedItem] = newItems.splice(sourceIndex, 1);
     newItems.splice(destinationIndex, 0, reorderedItem);
 
-    // Päivitetään orderIndex jokaiselle, jonka järjestys muuttui
-    newItems.forEach((item, index) => {
-      if (item.orderIndex !== index) {
-        handleUpdate(item.id, { orderIndex: index });
-      }
-    });
+    if (selectedDecade === 'Kuvaesitys') {
+      newItems.forEach((item, index) => {
+        if (item.presentationOrder !== index) {
+          handleUpdate(item.id, { presentationOrder: index });
+        }
+      });
+    } else {
+      newItems.forEach((item, index) => {
+        if (item.orderIndex !== index) {
+          handleUpdate(item.id, { orderIndex: index });
+        }
+      });
+    }
   };
 
   const saveAllChangesToDB = async () => {
@@ -302,7 +314,23 @@ export const Gallery = () => {
       list = list.filter(img => !img.hidden);
     }
 
-    if (selectedDecade !== 'Kaikki') {
+    if (selectedDecade === 'Kuvaesitys') {
+      list = list.filter(img => img.inPresentation);
+    } else if (selectedDecade === 'Etusivu') {
+      const newest10 = [...list].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)).slice(0, 10);
+      const newestIds = new Set(newest10.map(img => img.id));
+      
+      const presentationImgs = list
+        .filter(img => img.inPresentation && !newestIds.has(img.id))
+        .sort((a, b) => {
+           const aOrder = a.presentationOrder ?? 9999;
+           const bOrder = b.presentationOrder ?? 9999;
+           if (aOrder !== bOrder) return aOrder - bOrder;
+           return a.decade.localeCompare(b.decade) || a.id.localeCompare(b.id);
+        });
+      
+      list = [...newest10, ...presentationImgs];
+    } else if (selectedDecade !== 'Kaikki') {
       list = list.filter(img => img.decade === selectedDecade);
     }
     
@@ -320,7 +348,17 @@ export const Gallery = () => {
       list = list.filter(img => profile.favorites?.includes(img.id));
     }
 
+    if (selectedDecade === 'Etusivu' && sortBy === 'default') {
+      return list;
+    }
+
     return list.sort((a, b) => {
+      if (selectedDecade === 'Kuvaesitys' && sortBy === 'default') {
+        const aOrder = a.presentationOrder ?? 9999;
+        const bOrder = b.presentationOrder ?? 9999;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+      }
+
       if (sortBy === 'views') {
         const aViews = a.views || 0;
         const bViews = b.views || 0;
@@ -343,12 +381,12 @@ export const Gallery = () => {
   const decades = useMemo(() => {
     const allVisible = images.map(getEffectiveImage).filter(img => isAdminMode || !img.hidden);
     const decs = Array.from(new Set(allVisible.map(img => img.decade))).sort();
-    return ['Kaikki', ...decs];
+    return ['Etusivu', 'Kuvaesitys', 'Kaikki', ...decs];
   }, [images, pendingChanges, isAdminMode]);
 
   useEffect(() => {
-    if (selectedDecade !== 'Kaikki' && !decades.includes(selectedDecade)) {
-      setSelectedDecade('Kaikki');
+    if (selectedDecade !== 'Etusivu' && selectedDecade !== 'Kuvaesitys' && selectedDecade !== 'Kaikki' && !decades.includes(selectedDecade)) {
+      setSelectedDecade('Etusivu');
     }
   }, [decades, selectedDecade]);
 
@@ -575,6 +613,15 @@ export const Gallery = () => {
                           )}
 
                           <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
+                            {isAdminMode && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); togglePresentation(img); }} 
+                                className={`p-3.5 rounded-full backdrop-blur-sm transition-colors ${img.inPresentation ? 'bg-rasala-gold/90 text-amber-900 hover:bg-rasala-gold' : 'bg-black/50 text-white hover:bg-rasala-gold/50'}`}
+                                title={img.inPresentation ? "Poista esityksestä" : "Lisää esitykseen"}
+                              >
+                                <MonitorPlay size={16} />
+                              </button>
+                            )}
                             <button onClick={(e) => { e.stopPropagation(); handleRotate(img.id); }} className="p-3.5 bg-black/50 hover:bg-amber-600/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Käännä">
                               <RotateCw size={16} />
                             </button>
