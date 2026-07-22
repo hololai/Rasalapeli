@@ -134,7 +134,7 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <nav className="navbar-glass sm:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2 px-2">
+      <nav className="navbar-glass sm:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-around pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-2">
         {navItems.map(({ path, label, icon: Icon }) => {
           const active = location.pathname === path;
           return (

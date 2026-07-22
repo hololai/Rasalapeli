@@ -435,7 +435,7 @@ export const Gallery = () => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-10 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 w-[90vw] sm:w-auto max-w-[400px] sm:max-w-none text-center bg-amber-600 border-2 border-amber-400 p-3 sm:p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
+            className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:bottom-10 left-1/2 -translate-x-1/2 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 w-[90vw] sm:w-auto max-w-[400px] sm:max-w-none text-center bg-amber-600 border-2 border-amber-400 p-3 sm:p-4 rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.3)] backdrop-blur-md"
           >
             <span className="font-bold text-sm sm:text-base leading-tight">
               {pendingCount} {pendingCount === 1 ? 'muutos odottaa' : 'muutosta odottaa'}
