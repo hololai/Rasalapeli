@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2, Heart, MessageCircle, User } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Edit3, Save, RotateCw, Trash2, Heart, MessageCircle, User, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Comments } from './Comments';
