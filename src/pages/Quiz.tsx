@@ -420,7 +420,7 @@ export const Quiz = () => {
       {isAdminUser && !isAdminMode && (
         <button 
           onClick={() => setIsAdminMode(true)} 
-          className="absolute top-4 right-4 md:top-20 md:right-8 flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-rasala-gold/20 text-white rounded-full transition-all border border-white/10 z-20"
+          className="absolute top-20 right-4 md:top-24 md:right-8 flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-rasala-gold/20 text-white rounded-full transition-all border border-white/10 z-20"
         >
           <Lock size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Ylläpitotila</span>
         </button>
