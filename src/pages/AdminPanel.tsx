@@ -13,8 +13,8 @@ export function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Vain superadmin saa ladata käyttäjälistan (Firestore-säännöt varmistavat tämän myös)
-    if (profile?.role === 'superadmin') {
+    // Vain ylläpitäjät saavat ladata käyttäjälistan (Firestore-säännöt varmistavat tämän myös)
+    if (profile?.role === 'superadmin' || profile?.role === 'admin') {
       fetchUsers();
     }
   }, [profile]);

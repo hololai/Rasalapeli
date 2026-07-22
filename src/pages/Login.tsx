@@ -109,12 +109,7 @@ export function Login() {
           </div>
         )}
 
-        {isMobile && mode === 'login' && (
-          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left text-sm text-amber-200/80">
-            <p className="mb-2"><strong>Oletko Google-käyttäjä?</strong></p>
-            <p>Vältä selaimesi yhteysongelmat tällä mobiililaitteella: Paina alta <em>Unohdin salasanani</em> ja syötä Google-sähköpostisi, niin saat linkin mobiilisalasanan asettamiseen.</p>
-          </div>
-        )}
+
 
         <form onSubmit={handleEmailAction} className="space-y-4">
           {mode === 'register' && (
@@ -177,15 +172,23 @@ export function Login() {
           </button>
         </form>
 
-        <div className="mt-6 flex flex-col items-center gap-3 text-sm">
+        <div className="mt-6 flex flex-col items-center gap-4 text-sm">
           {mode === 'login' ? (
             <>
-              <button onClick={() => setMode('forgot')} className="text-amber-500 hover:text-amber-400 font-medium transition-colors">
+              <button onClick={() => setMode('forgot')} className="text-amber-500 hover:text-amber-400 font-medium transition-colors mb-2">
                 Unohdin salasanani / Aseta mobiilisalasana
               </button>
-              <button onClick={() => setMode('register')} className="text-stone-400 hover:text-stone-300 transition-colors">
-                Ei tiliä? Luo uusi tili (katseluoikeus)
-              </button>
+              
+              <div className="w-full flex flex-col items-center gap-3">
+                <span className="text-stone-400 text-xs uppercase tracking-wider font-medium">Uusi käyttäjä?</span>
+                <button 
+                  onClick={() => setMode('register')} 
+                  className="w-full max-w-[200px] flex items-center justify-center bg-transparent border-2 border-amber-500/50 hover:border-amber-500 text-amber-500 hover:text-amber-400 font-bold py-2.5 px-6 rounded-xl transition-all"
+                >
+                  Rekisteröidy
+                </button>
+                <span className="text-stone-500 text-xs">(Katseluoikeus arkistoon)</span>
+              </div>
             </>
           ) : (
             <button onClick={() => setMode('login')} className="text-stone-400 hover:text-stone-300 transition-colors">
@@ -193,6 +196,13 @@ export function Login() {
             </button>
           )}
         </div>
+
+        {isMobile && mode === 'login' && (
+          <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left text-sm text-amber-200/80">
+            <p className="mb-2"><strong>Oletko Google-käyttäjä?</strong></p>
+            <p>Vältä selaimesi yhteysongelmat tällä mobiililaitteella: Paina yltä <em>Unohdin salasanani</em> ja syötä Google-sähköpostisi, niin saat linkin mobiilisalasanan asettamiseen.</p>
+          </div>
+        )}
 
         <div className="mt-8 flex items-center justify-center gap-2 text-stone-600 text-sm">
           <ShieldCheck className="w-4 h-4" />
