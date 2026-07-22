@@ -243,7 +243,14 @@ export const Gallery = () => {
   };
 
   const handleHide = (id: string) => {
-    handleUpdate(id, { hidden: true });
+    const img = getEffectiveImage(images.find(i => i.id === id)!);
+    if (img.hidden) {
+      handleUpdate(id, { hidden: false });
+    } else {
+      if (window.confirm("Haluatko varmasti piilottaa tämän kuvan? Vain ylläpitäjät näkevät sen jatkossa.")) {
+        handleUpdate(id, { hidden: true });
+      }
+    }
   };
 
   const togglePresentation = (img: GalleryImage) => {
@@ -417,6 +424,7 @@ export const Gallery = () => {
     uploaderName: img.uploaderName,
     uploaderEmail: img.uploaderEmail,
     views: img.views || 0,
+    hidden: img.hidden || false,
     // img-objektissa pitää olla rawDriveUrl jos se tallennettiin kannasta!
     // Lisätään se myös GalleryImage-interfaceen.
   }));
@@ -647,9 +655,9 @@ export const Gallery = () => {
                               <Edit3 size={16} />
                             </button>
                             {img.hidden ? (
-                              <div className="p-3.5 bg-red-500/80 rounded-full text-white backdrop-blur-sm" title="Piilotettu vieraiden näkyviltä">
+                              <button onClick={(e) => { e.stopPropagation(); handleHide(img.id); }} className="p-3.5 bg-red-500/80 hover:bg-green-500/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Palauta näkyviin">
                                 <Lock size={16} />
-                              </div>
+                              </button>
                             ) : (
                               <button onClick={(e) => { e.stopPropagation(); handleHide(img.id); }} className="p-3.5 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors" title="Piilota vierailta">
                                 <Trash2 size={16} />

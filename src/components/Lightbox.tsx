@@ -6,7 +6,7 @@ import { Comments } from './Comments';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LightboxProps {
-  images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number; uploaderName?: string; uploaderEmail?: string; views?: number; rawDriveUrl?: string }[];
+  images: { id: string; src: string; title: string; year?: number | string; description?: string; rotation?: number; uploaderName?: string; uploaderEmail?: string; views?: number; rawDriveUrl?: string; hidden?: boolean }[];
   startIndex?: number;
   onClose: () => void;
   isAdmin?: boolean;
@@ -108,8 +108,8 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
           </button>
         )}
         {isAdmin && onHide && (
-          <button onClick={(e) => { e.stopPropagation(); onHide(img.id); }} className="p-3 rounded-full bg-gray-700/50 hover:bg-gray-600 text-white transition-colors backdrop-blur-md" title="Piilota kuva">
-            <Trash2 size={24} />
+          <button onClick={(e) => { e.stopPropagation(); onHide(img.id); }} className={`p-3 rounded-full ${img.hidden ? 'bg-red-600/80 hover:bg-green-600' : 'bg-gray-700/50 hover:bg-gray-600'} text-white transition-colors backdrop-blur-md`} title={img.hidden ? 'Palauta näkyviin' : 'Piilota kuva'}>
+            {img.hidden ? <Lock size={24} /> : <Trash2 size={24} />}
           </button>
         )}
         <button onClick={onClose} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md">
