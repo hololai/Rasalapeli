@@ -62,6 +62,10 @@ service cloud.firestore {
                     )));
       allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin() || isAdmin());
       
+      // OMAN PROFIILIN PÄIVITYS: Käyttäjä saa päivittää omia tietojaan (esim. suosikit),
+      // kunhan hän ei yritä muuttaa omaa rooliaan!
+      allow update: if request.auth != null && request.auth.uid == userId && 
+                    request.resource.data.role == resource.data.role;
       // SUPERADMIN SÄÄNTÖ: saa tehdä mitä vain muiden profiileille
       allow update, delete: if request.auth != null && isSuperAdmin();
 
