@@ -775,8 +775,8 @@ export const Gallery = () => {
                 <X size={20} />
               </button>
               
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl sm:text-2xl font-serif text-rasala-gold font-bold pr-4">Muokkaa Tietoja</h3>
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 gap-3 pr-8 sm:pr-12">
+                <h3 className="text-xl sm:text-2xl font-serif text-rasala-gold font-bold">Muokkaa Tietoja</h3>
                 <button 
                   onClick={() => setEditInPresentation(!editInPresentation)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border ${editInPresentation ? 'bg-rasala-gold/90 text-amber-900 border-rasala-gold shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-black/50 text-white/50 border-white/20 hover:text-white hover:border-white/40'}`}
