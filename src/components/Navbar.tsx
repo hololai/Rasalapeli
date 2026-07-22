@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Clock, Map, BookOpen, LogOut, LogIn, User, ShieldAlert } from 'lucide-react';
+import { Home, Clock, Map, BookOpen, LogOut, LogIn, User, ShieldAlert, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { InfoButton } from './InfoButton';
 import { clsx, type ClassValue } from 'clsx';
@@ -40,6 +40,15 @@ export const Navbar = () => {
               "Jos sinulla on vanhoja valokuvia tai muistat mielenkiintoisen tarinan jostakin paikasta, ota yhteyttä ylläpitäjään, jotta voimme tallentaa sen tänne!"
             ]}
           />
+          <a 
+            href="https://drive.google.com/drive/folders/11OZae2hP4XBVIJbbD8Kca8VKmeAiRNdu?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all ml-2"
+          >
+            <ExternalLink size={14} />
+            Alkuperäiset tarkat kuvat
+          </a>
         </div>
         <div className="flex gap-1">
           {navItems.map(({ path, label, icon: Icon }) => {
@@ -101,16 +110,28 @@ export const Navbar = () => {
       {/* Mobile – alapalkki (yläpalkkiin laitetaan mobiilissa logo ja info) */}
       <div className="sm:hidden fixed top-0 left-0 right-0 z-50 px-4 py-3 bg-black/60 backdrop-blur-md border-b border-white/5 flex items-center justify-between">
         <span className="font-serif text-lg font-bold text-rasala-gold tracking-wide">Ellan ja Viken suku</span>
-        <InfoButton 
-          title="Tervetuloa!"
-          iconSize={18}
-          buttonClassName="p-1.5 bg-black/50"
-          instructions={[
-            "Tervetuloa Rasalapeliin – yhteiseen muistojen arkistoomme.",
-            "Tämä sovellus on tarkoitettu tarinoiden, valokuvien ja historian jakamiseen turvallisesti perheen ja suvun kesken.",
-            "Jos sinulla on vanhoja valokuvia tai muistat mielenkiintoisen tarinan jostakin paikasta, ota yhteyttä ylläpitäjään, jotta voimme tallentaa sen tänne!"
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <a 
+            href="https://drive.google.com/drive/folders/11OZae2hP4XBVIJbbD8Kca8VKmeAiRNdu?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2 py-1.5 bg-white/5 text-white/70 border border-white/10 rounded-lg text-[10px] font-bold uppercase hover:bg-white/10"
+            title="Alkuperäiset tarkat kuvat"
+          >
+            <ExternalLink size={14} />
+            Kuvat
+          </a>
+          <InfoButton 
+            title="Tervetuloa!"
+            iconSize={18}
+            buttonClassName="p-1.5 bg-black/50"
+            instructions={[
+              "Tervetuloa Rasalapeliin – yhteiseen muistojen arkistoomme.",
+              "Tämä sovellus on tarkoitettu tarinoiden, valokuvien ja historian jakamiseen turvallisesti perheen ja suvun kesken.",
+              "Jos sinulla on vanhoja valokuvia tai muistat mielenkiintoisen tarinan jostakin paikasta, ota yhteyttä ylläpitäjään, jotta voimme tallentaa sen tänne!"
+            ]}
+          />
+        </div>
       </div>
 
       <nav className="navbar-glass sm:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2 px-2">
