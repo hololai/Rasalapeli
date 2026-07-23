@@ -1,28 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Clock, Map, BookOpen, LogOut, LogIn, User, ShieldAlert, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { InfoButton } from './InfoButton';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { db } from '../firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const defaultNavItems = [
-  { path: '/',          label: 'Valokuvat', icon: Home },
-  { path: '/map',       label: 'Kartta',    icon: Map },
-  { path: '/quiz',      label: 'Tietovisa', icon: BookOpen },
-];
-
 export const Navbar = () => {
   const location = useLocation();
   const { user, profile, signInWithGoogle, logout } = useAuth();
+  const [isQuizPublished, setIsQuizPublished] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'quiz'), (docSnap) => {
+      if (docSnap.exists()) {
+        setIsQuizPublished(docSnap.data().isPublished || false);
+      }
+    });
+    return unsub;
+  }, []);
+
+  const baseNavItems = [
+    { path: '/',          label: 'Valokuvat', icon: Home },
+    { path: '/map',       label: 'Kartta',    icon: Map },
+  ];
+
+  if (isQuizPublished || profile?.role === 'superadmin' || profile?.role === 'admin') {
+    baseNavItems.push({ path: '/quiz', label: 'Tietovisa', icon: BookOpen });
+  }
 
   const navItems = (profile?.role === 'superadmin' || profile?.role === 'admin')
-    ? [...defaultNavItems, { path: '/admin', label: 'Käyttäjähallinta', icon: ShieldAlert }] 
-    : defaultNavItems;
+    ? [...baseNavItems, { path: '/admin', label: 'Käyttäjähallinta', icon: ShieldAlert }] 
+    : baseNavItems;
 
   return (
     <>

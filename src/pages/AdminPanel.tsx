@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserProfile, UserRole } from '../contexts/AuthContext';
@@ -11,13 +11,31 @@ export function AdminPanel() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isQuizPublished, setIsQuizPublished] = useState(false);
 
   useEffect(() => {
     // Vain ylläpitäjät saavat ladata käyttäjälistan (Firestore-säännöt varmistavat tämän myös)
     if (profile?.role === 'superadmin' || profile?.role === 'admin') {
       fetchUsers();
     }
+
+    const unsub = onSnapshot(doc(db, 'settings', 'quiz'), (docSnap) => {
+      if (docSnap.exists()) {
+        setIsQuizPublished(docSnap.data().isPublished || false);
+      }
+    });
+
+    return unsub;
   }, [profile]);
+
+  const handleToggleQuiz = async () => {
+    try {
+      await setDoc(doc(db, 'settings', 'quiz'), { isPublished: !isQuizPublished }, { merge: true });
+    } catch (err) {
+      console.error(err);
+      alert('Tietovisan julkaisun tallennus epäonnistui. Vain Superadmin voi muuttaa tätä.');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -94,6 +112,30 @@ export function AdminPanel() {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
           {error}
+        </div>
+      )}
+
+      {profile?.role === 'superadmin' && (
+        <div className="mb-8 bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-xl border border-amber-900/10">
+          <h2 className="text-xl font-bold font-serif text-amber-900 dark:text-amber-100 mb-4">Globaalit asetukset</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-stone-800 dark:text-stone-200">Tietovisan julkaisu</p>
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                {isQuizPublished ? 'Tietovisa on näkyvillä kaikille käyttäjille.' : 'Tietovisa on piilotettu tavallisilta käyttäjiltä (vain adminit näkevät sen).'}
+              </p>
+            </div>
+            <button
+              onClick={handleToggleQuiz}
+              className={`px-4 py-2 rounded-xl font-bold transition-colors ${
+                isQuizPublished 
+                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300' 
+                  : 'bg-stone-200 text-stone-700 hover:bg-stone-300 dark:bg-stone-700 dark:text-stone-300'
+              }`}
+            >
+              {isQuizPublished ? 'Piilota tietovisa' : 'Julkaise tietovisa'}
+            </button>
+          </div>
         </div>
       )}
 

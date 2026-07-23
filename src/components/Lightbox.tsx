@@ -185,7 +185,7 @@ export const Lightbox: React.FC<LightboxProps> = ({ images, startIndex = 0, onCl
           {/* Left Side: Caption */}
           <div className="flex-1 max-w-3xl pr-4 pointer-events-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-1">
-              {img.year && <span className="text-rasala-gold text-sm font-bold tracking-widest">{img.year}</span>}
+              {/* img.year näkyy nyt h2-otsikkona (title), joten poistettu ylimääräinen span */}
               {img.uploaderName && (
                 <div 
                   className="flex items-center justify-center p-1.5 rounded-full bg-black/30 hover:bg-black/50 transition-colors border border-white/10 cursor-help"

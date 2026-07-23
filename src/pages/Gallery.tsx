@@ -417,7 +417,7 @@ export const Gallery = () => {
   const lightboxData = displayImages.map((img) => ({
     id: img.id,
     src: img.path,
-    title: img.decade,
+    title: img.year ? String(img.year) : img.decade,
     year: img.year,
     description: img.caption || (isAdminMode ? img.filename : ''),
     rotation: img.rotation || 0,
@@ -668,7 +668,7 @@ export const Gallery = () => {
                           <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
                             <p className="text-white/90 text-sm font-medium drop-shadow-md mb-1">{img.caption || "Ei kuvatekstiä"}</p>
                             <div className="flex justify-between items-center text-xs">
-                              <span className="text-rasala-gold font-bold bg-black/50 px-2 py-0.5 rounded-full">{img.decade}</span>
+                              <span className="text-rasala-gold font-bold bg-black/50 px-2 py-0.5 rounded-full">{img.year || img.decade}</span>
                               {isAdminMode && <span className="text-white/50">{img.filename}</span>}
                             </div>
                           </div>
@@ -718,7 +718,7 @@ export const Gallery = () => {
 
                   <div className="absolute top-3 left-3 flex gap-2">
                     <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-rasala-gold border border-rasala-gold/20">
-                      {img.decade}
+                      {img.year || img.decade}
                     </div>
                     {(img.locationText || img.locationId) && (
                       <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-rasala-gold border border-rasala-gold/20 flex items-center gap-1">
