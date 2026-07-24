@@ -175,7 +175,34 @@ export function Login() {
         <div className="mt-6 flex flex-col items-center gap-4 text-sm">
           {mode === 'login' ? (
             <>
-              <button onClick={() => setMode('forgot')} className="text-amber-500 hover:text-amber-400 font-medium transition-colors mb-2">
+              <button 
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (email && email.includes('@')) {
+                    setError('');
+                    setSuccess('');
+                    setIsLoggingIn(true);
+                    try {
+                      await resetPassword(email);
+                      setSuccess('Palautuslinkki on lähetetty sähköpostiisi!\n\nHUOM 1: Tarkista myös roskapostikansio.\nHUOM 2: Turvallisuussyistä aseta uusi salasana vähintään 15 merkin pituiseksi.');
+                    } catch (err: any) {
+                      console.error(err);
+                      if (err.message.includes('auth/invalid-email')) {
+                        setError('Virheellinen sähköpostiosoite.');
+                      } else if (err.message.includes('auth/user-not-found') || err.message.includes('auth/invalid-credential')) {
+                        setError('Tällä sähköpostilla ei löydy tiliä. Varmista oikeinkirjoitus.');
+                      } else {
+                        setError(err.message || 'Tapahtui tuntematon virhe.');
+                      }
+                    } finally {
+                      setIsLoggingIn(false);
+                    }
+                  } else {
+                    setMode('forgot');
+                  }
+                }} 
+                className="text-amber-500 hover:text-amber-400 font-medium transition-colors mb-2"
+              >
                 Unohdin salasanani / Aseta mobiilisalasana
               </button>
               
@@ -200,7 +227,10 @@ export function Login() {
         {isMobile && mode === 'login' && (
           <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left text-sm text-amber-200/80">
             <p className="mb-2"><strong>Oletko Google-käyttäjä?</strong></p>
-            <p>Vältä selaimesi yhteysongelmat tällä mobiililaitteella: Paina yltä <em>Unohdin salasanani</em> ja syötä Google-sähköpostisi, niin saat linkin mobiilisalasanan asettamiseen.</p>
+            <p>Vältä selaimesi yhteysongelmat tällä mobiililaitteella tekemällä näin:<br/>
+            1. Kirjoita Google-sähköpostisi ylempään kenttään.<br/>
+            2. Paina sen jälkeen oranssia <em>Unohdin salasanani</em> -linkkiä.<br/>
+            Lähetämme sinulle ohjeet mobiilisalasanan asettamiseen.</p>
           </div>
         )}
 
