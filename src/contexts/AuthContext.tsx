@@ -47,24 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let authResolved = false;
-
-    const checkRedirect = async () => {
-      try {
-        await getRedirectResult(auth);
-      } catch (error) {
-        console.error("Virhe redirect-kirjautumisen paluussa:", error);
-      } finally {
-        authResolved = true;
-        // Jos käyttäjä on yhä null (eikä onAuthStateChanged ole jo vapauttanut latausta),
-        // vapautetaan se tässä.
-        if (!auth.currentUser) {
-          setLoading(false);
-        }
-      }
-    };
-    checkRedirect();
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -79,6 +61,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (userSnap.exists()) {
             let dbProfile = userSnap.data() as UserProfile;
+            
+
             
             setProfile(dbProfile);
           } else {
@@ -114,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Ei jäädä odottamaan setDocin valmistumista (jos verkko yskii), tallennetaan taustalla
             setDoc(userRef, newProfile).catch(e => console.error("setDoc taustavirhe:", e));
             
+
             setProfile(newProfile);
           }
         } catch (error) {
@@ -139,6 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fallbackRole = 'admin';
           }
           
+
+
           setProfile({
             uid: currentUser.uid,
             email: currentUser.email || '',
@@ -147,16 +134,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: fallbackRole,
           });
         }
-        setLoading(false);
       } else {
         setProfile(null);
-        if (authResolved) {
-          setLoading(false);
-        }
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Käsitellään redirectin tulos (mobiililla palataan tänne)
+  useEffect(() => {
+    getRedirectResult(auth).catch((error) => {
+      console.error("Virhe redirect-kirjautumisen paluussa:", error);
+    });
   }, []);
 
   const signInWithGoogle = async () => {
