@@ -65,6 +65,7 @@ export const Gallery = () => {
   
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [frozenLightboxData, setFrozenLightboxData] = useState<any[]>([]);
   const [visibleCount, setVisibleCount] = useState(24);
 
   useEffect(() => {
@@ -340,21 +341,7 @@ export const Gallery = () => {
 
     if (selectedDecade === 'Kuvaesitys') {
       list = list.filter(img => img.inPresentation);
-    } else if (selectedDecade === 'Etusivu') {
-      const newest10 = [...list].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)).slice(0, 10);
-      const newestIds = new Set(newest10.map(img => img.id));
-      
-      const presentationImgs = list
-        .filter(img => img.inPresentation && !newestIds.has(img.id))
-        .sort((a, b) => {
-           const aOrder = a.presentationOrder ?? 9999;
-           const bOrder = b.presentationOrder ?? 9999;
-           if (aOrder !== bOrder) return aOrder - bOrder;
-           return a.decade.localeCompare(b.decade) || a.id.localeCompare(b.id);
-        });
-      
-      list = [...newest10, ...presentationImgs];
-    } else if (selectedDecade !== 'Kaikki') {
+    } else if (selectedDecade !== 'Etusivu' && selectedDecade !== 'Kaikki') {
       list = list.filter(img => img.decade === selectedDecade);
     }
     
@@ -372,8 +359,12 @@ export const Gallery = () => {
       list = list.filter(img => profile.favorites?.includes(img.id));
     }
 
+    let newestIds: string[] = [];
     if (selectedDecade === 'Etusivu' && sortBy === 'default') {
-      return list;
+      newestIds = [...images]
+        .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0))
+        .slice(0, 12)
+        .map(img => img.id);
     }
 
     return list.sort((a, b) => {
@@ -387,6 +378,23 @@ export const Gallery = () => {
         const aViews = a.views || 0;
         const bViews = b.views || 0;
         if (bViews !== aViews) return bViews - aViews; // Eniten katsotut ensin
+      }
+
+      if (selectedDecade === 'Etusivu' && sortBy === 'default') {
+        const aIsNew = newestIds.includes(a.id);
+        const bIsNew = newestIds.includes(b.id);
+        
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+        if (aIsNew && bIsNew) {
+           return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+        }
+        
+        // Sitten uusimmat vuosikymmenet ensin (descending)
+        const decadeDiff = b.decade.localeCompare(a.decade);
+        if (decadeDiff !== 0) return decadeDiff;
+        
+        return a.id.localeCompare(b.id);
       }
       
       const aOrder = a.orderIndex !== undefined ? a.orderIndex : 0;
@@ -611,7 +619,11 @@ export const Gallery = () => {
                             alt={img.filename} 
                             className="w-full h-full object-cover transition-transform duration-700 cursor-zoom-in"
                             style={{ transform: `scale(1.05) rotate(${img.rotation}deg)` }}
-                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                            onClick={() => { 
+                              setFrozenLightboxData(lightboxData);
+                              setLightboxIndex(index); 
+                              setLightboxOpen(true); 
+                            }}
                             loading="lazy"
                           />
                           
@@ -706,7 +718,11 @@ export const Gallery = () => {
                     alt={img.filename} 
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-zoom-in"
                     style={{ transform: `scale(1.05) rotate(${img.rotation}deg)` }}
-                    onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                    onClick={() => { 
+                      setFrozenLightboxData(lightboxData);
+                      setLightboxIndex(index); 
+                      setLightboxOpen(true); 
+                    }}
                     loading="lazy"
                   />
                   
@@ -889,7 +905,7 @@ export const Gallery = () => {
       <AnimatePresence>
         {lightboxOpen && (
           <Lightbox
-            images={lightboxData}
+            images={frozenLightboxData}
             startIndex={lightboxIndex}
             onClose={() => setLightboxOpen(false)}
             isAdmin={isAdminMode}
