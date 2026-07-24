@@ -92,7 +92,7 @@ export function Login() {
           </div>
         )}
 
-        {!isMobile && mode === 'login' && (
+        {mode === 'login' && (
           <div className="mb-8">
             <button
               onClick={handleGoogleLogin}
@@ -197,12 +197,6 @@ export function Login() {
           )}
         </div>
 
-        {isMobile && mode === 'login' && (
-          <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left text-sm text-amber-200/80">
-            <p className="mb-2"><strong>Oletko Google-käyttäjä?</strong></p>
-            <p>Vältä selaimesi yhteysongelmat tällä mobiililaitteella: Paina yltä <em>Unohdin salasanani</em> ja syötä Google-sähköpostisi, niin saat linkin mobiilisalasanan asettamiseen.</p>
-          </div>
-        )}
 
         <div className="mt-8 flex items-center justify-center gap-2 text-stone-600 text-sm">
           <ShieldCheck className="w-4 h-4" />
