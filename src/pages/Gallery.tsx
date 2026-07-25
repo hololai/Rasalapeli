@@ -369,9 +369,9 @@ export const Gallery = () => {
 
     return list.sort((a, b) => {
       if (selectedDecade === 'Kuvaesitys' && sortBy === 'default') {
-        const getYearNum = (y?: string) => {
+        const getYearNum = (y?: any) => {
           if (!y) return 9999;
-          const match = y.match(/\d{4}/);
+          const match = String(y).match(/\d{4}/);
           return match ? parseInt(match[0], 10) : 9999;
         };
         const aYear = getYearNum(a.year);
@@ -382,7 +382,7 @@ export const Gallery = () => {
         }
         
         if (a.year && b.year && a.year !== b.year) {
-          return a.year.localeCompare(b.year);
+          return String(a.year).localeCompare(String(b.year));
         }
 
         const aOrder = a.presentationOrder ?? 9999;
