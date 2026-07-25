@@ -369,6 +369,22 @@ export const Gallery = () => {
 
     return list.sort((a, b) => {
       if (selectedDecade === 'Kuvaesitys' && sortBy === 'default') {
+        const getYearNum = (y?: string) => {
+          if (!y) return 9999;
+          const match = y.match(/\d{4}/);
+          return match ? parseInt(match[0], 10) : 9999;
+        };
+        const aYear = getYearNum(a.year);
+        const bYear = getYearNum(b.year);
+        
+        if (aYear !== bYear) {
+          return aYear - bYear;
+        }
+        
+        if (a.year && b.year && a.year !== b.year) {
+          return a.year.localeCompare(b.year);
+        }
+
         const aOrder = a.presentationOrder ?? 9999;
         const bOrder = b.presentationOrder ?? 9999;
         if (aOrder !== bOrder) return aOrder - bOrder;
